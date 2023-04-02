@@ -11,7 +11,7 @@ import requests
 import semver
 import webbrowser
 
-current_version = 'v0.3.0'
+current_version = "v0.3.0"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -86,6 +86,10 @@ class PlantCodeFinder(tk.Frame):
         self.missing_folder_button = ttk.Button(right_buttons_frame, text="Vytvořit složku missing", command=self.create_missing_folder)
         self.missing_folder_button.grid(row=1, column=0, pady=10, sticky="w")
 
+        # Automatické updaty
+        self.check_updates_button = ttk.Button(main_frame, text="Zkontrolovat aktualizace", command=self.check_for_updates)
+        self.check_updates_button.grid(row=0, column=0, padx=(100, 0), pady=(0, 0), sticky="e")
+
         # Section 2: Checkboxes
         section2_label = ttk.Label(main_frame, text="Nastavení", font=("Helvetica", 12, "bold"))
         section2_label.grid(row=2, column=0, pady=(0, 10), sticky="w")
@@ -130,6 +134,41 @@ class PlantCodeFinder(tk.Frame):
             name = self.template_wb.active.cell(row=row, column=1).value
             code = self.template_wb.active.cell(row=row, column=2).value
             self.codes[name] = code
+
+    def check_for_updates(self):
+        url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
+        response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
+
+        if response.status_code == requests.codes.ok:
+            latest_release = response.json()
+            latest_version = latest_release['tag_name'][1:]
+            if semver.compare(current_version[1:], latest_version) < 0:
+                # Display a message box to the user
+                result = messagebox.askyesno('Update Available', 'A new version of MyApp is available. Do you want to download and install it?')
+
+                if result:
+                    # Open the Github page for the latest release in the user's default web browser
+                    url = latest_release['html_url']
+                    webbrowser.open_new(url)
+
+                    # An update is available, download the asset(s) that match your platform and architecture
+                    assets = latest_release['assets']
+                    for asset in assets:
+                        if 'Windows' in asset['name'] and 'x86_64' in asset['name']:
+                            download_url = asset['browser_download_url']
+                            r = requests.get(download_url)
+                            # Save the downloaded asset to a file
+                            with open('aplikace_v.0.3.0.exe', 'wb') as f:
+                                f.write(r.content)
+                else:
+                    # Do nothing if the user clicks "No"
+                    pass
+            else:
+                # No update available
+                messagebox.showinfo('No Updates', 'You are running the latest version of MyApp.')
+        else:
+            # Failed to retrieve latest release info
+            messagebox.showerror('Error', 'Failed to retrieve latest release information from GitHub.')        
 
     def has_excel_files(self):
         for filename in os.listdir('.'):
