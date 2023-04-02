@@ -144,7 +144,7 @@ class PlantCodeFinder(tk.Frame):
             latest_version = latest_release['tag_name'][1:]
             if semver.compare(current_version[1:], latest_version) < 0:
                 # Display a message box to the user
-                result = messagebox.askyesno('Update Available', 'A new version of MyApp is available. Do you want to download and install it?')
+                result = messagebox.askyesno('Aktualizace dostupná', 'Nová verze toolu na pasy je k dispozici, přeje si Olinka navštívit stáhnout novou verzi z webu?')
 
                 if result:
                     # Open the Github page for the latest release in the user's default web browser
@@ -168,7 +168,7 @@ class PlantCodeFinder(tk.Frame):
                 messagebox.showinfo('Žádné aktualizace', 'Pro Olinku není k dispozici bohužel žádná aktualizace')
         else:
             # Failed to retrieve latest release info
-            messagebox.showerror('Error', 'Failed to retrieve latest release information from GitHub.')        
+            messagebox.showerror('Chyba', 'Nedokázal jsem zjistit informace o nejnovější verzi z GitHubu.')        
 
     def has_excel_files(self):
         for filename in os.listdir('.'):
