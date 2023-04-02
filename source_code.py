@@ -22,7 +22,7 @@ if response.status_code == requests.codes.ok:
         # Display a message box to the user
         app = tk.Tk()
         app.withdraw()
-        result = messagebox.askyesno('Update Available', 'A new version of MyApp is available. Do you want to download and install it?')
+        result = messagebox.askyesno('Aktualizace dostupná', 'Nová verze toolu na pasy je k dispozici, přeje si Olinka navštívit stáhnout novou verzi z webu?')
 
         if result:
             # Open the Github page for the latest release in the user's default web browser
@@ -165,7 +165,7 @@ class PlantCodeFinder(tk.Frame):
                     pass
             else:
                 # No update available
-                messagebox.showinfo('No Updates', 'You are running the latest version of MyApp.')
+                messagebox.showinfo('Žádné aktualizace', 'Pro Olinku není k dispozici bohužel žádná aktualizace')
         else:
             # Failed to retrieve latest release info
             messagebox.showerror('Error', 'Failed to retrieve latest release information from GitHub.')        

@@ -1,0 +1,1 @@
+pyinstaller --onefile --noconsole --add-data "template.xlsx;." source_code.py
