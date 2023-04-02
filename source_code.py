@@ -46,7 +46,7 @@ class PlantCodeFinder(tk.Frame):
         self.missing_folder_button = ttk.Button(right_buttons_frame, text="Vytvořit složku missing", command=self.create_missing_folder)
         self.missing_folder_button.grid(row=1, column=0, pady=10, sticky="w")
 
-        # Section 2: Checkboxes
+        # Section 2: Checkboxy
         section2_label = ttk.Label(main_frame, text="Nastavení", font=("Helvetica", 12, "bold"))
         section2_label.grid(row=2, column=0, pady=(0, 10), sticky="w")
 
