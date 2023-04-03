@@ -25,27 +25,24 @@ if response.status_code == requests.codes.ok:
         result = messagebox.askyesno('Aktualizace dostupná', 'Nová verze toolu na pasy je k dispozici, přeje si Olinka navštívit stáhnout novou verzi z webu?')
 
         if result:
-            # Open the Github page for the latest release in the user's default web browser
+            # Otevřít GitHub k nalezení aktuální verze
             url = latest_release['html_url']
             webbrowser.open_new(url)
 
-            # An update is available, download the asset(s) that match your platform and architecture
+            # Update je k dispozici, detekce platformy
             assets = latest_release['assets']
             for asset in assets:
                 if 'Windows' in asset['name'] and 'x86_64' in asset['name']:
                     download_url = asset['browser_download_url']
                     r = requests.get(download_url)
-                    # Save the downloaded asset to a file
-                    with open('aplikace_v.0.3.0.exe', 'wb') as f:
-                        f.write(r.content)
         else:
-            # Do nothing if the user clicks "No"
+            # Nedělat nic, pokud zvoleno "Ne"
             pass
     else:
-        # No update available
+        # Update není k dispozici
         pass
 else:
-    # Failed to retrieve latest release info
+    # Neobdržel jsem info o updatu
     pass
 
 class PlantCodeFinder(tk.Frame):
@@ -89,6 +86,10 @@ class PlantCodeFinder(tk.Frame):
         # Automatické updaty
         self.check_updates_button = ttk.Button(main_frame, text="Zkontrolovat aktualizace", command=self.check_for_updates)
         self.check_updates_button.grid(row=0, column=0, padx=(100, 0), pady=(0, 0), sticky="e")
+
+        # Label verze
+        self.version_label = ttk.Label(main_frame, text=current_version, font=("Helvetica", 10, "bold"))
+        self.version_label.grid(row=0, column=1, pady=(0, 10), sticky="e")
 
         # Section 2: Checkboxes
         section2_label = ttk.Label(main_frame, text="Nastavení", font=("Helvetica", 12, "bold"))
@@ -357,18 +358,23 @@ class PlantCodeFinder(tk.Frame):
             xlApp.Quit()
 
     def save_all_excels_as_pdfs(self):
+        has_excel_files = False
         for filename in os.listdir('.'):
             if filename.endswith('.xlsx') and filename != 'template.xlsx':
+                has_excel_files = True
                 wb = openpyxl.load_workbook(filename)
                 for sheet in wb:
                     self.save_excel_as_pdf(filename, sheet.title)
                     self.output_console.insert(tk.END, f"Uloženo jako:{sheet.title}\n")
                     self.output_console.see(tk.END)  # Auto-scroll to the end
                     self.output_console.update()  # Ensure the output console is updated
-
-        self.output_console.insert(tk.END, "Všechny listy v excelu byly uloženy jako samostatné PDF.\n")
-        self.output_console.see(tk.END)  # Auto-scroll to the end
-        self.output_console.update()  # Ensure the output console is updated        
+    
+        if not has_excel_files:
+            messagebox.showinfo("Chyba", "A teď zase Olinka nedodala Excely na konvertování do PDF. Bože muj.")
+        else:
+            self.output_console.insert(tk.END, "Všechny listy v excelu byly uloženy jako samostatné PDF.\n")
+            self.output_console.see(tk.END)  # Auto-scroll to the end
+            self.output_console.update()  # Ensure the output console is updated    
     
     def quit(self):
         self.master.destroy()
