@@ -307,21 +307,23 @@ class PlantCodeFinder(tk.Frame):
         messagebox.showinfo("Povedlo se!", "Teď už to jen stačí poslat blbečkům na mail :).")
 
     def delete_codes_and_cz(self):
-        for filename in os.listdir('.'):
-            if not filename.endswith('.xlsx') or filename == 'template.xlsx':
-                continue 
-            wb = openpyxl.load_workbook(filename)
-            for sheet in wb:
-                ws = wb[sheet.title]
-                for row in range(13, ws.max_row + 1):
-                    ws.cell(row=row, column=4).value = None
-                    ws.cell(row=row, column=5).value = None
+        if not self.has_excel_files():
+            messagebox.showerror("Chyba", "Olinka už mi zase nedala Excely, dělá si ze mě prdel??")
+        else:
+            for filename in os.listdir('.'):
+                if not filename.endswith('.xlsx') or filename == 'template.xlsx':
+                    continue 
+                wb = openpyxl.load_workbook(filename)
+                for sheet in wb:
+                    ws = wb[sheet.title]
+                    for row in range(13, ws.max_row + 1):
+                        ws.cell(row=row, column=4).value = None
+                        ws.cell(row=row, column=5).value = None
+                wb.save(filename)
 
-            wb.save(filename)
-
-        self.output_console.insert(tk.END, "Vyčistil jsem kódy a CZ ze všech Excelů.\n")
-        self.output_console.see(tk.END)  # Auto-scroll to the end
-        self.output_console.update()  # Ensure the output console is updated
+            self.output_console.insert(tk.END, "Vyčistil jsem kódy a CZ ze všech Excelů.\n")
+            self.output_console.see(tk.END)  # Auto-scroll to the end
+            self.output_console.update()  # Ensure the output console is updated
 
     def create_missing_folder(self):
         if not os.path.exists("missing"):
@@ -370,7 +372,7 @@ class PlantCodeFinder(tk.Frame):
                     self.output_console.update()  # Ensure the output console is updated
     
         if not has_excel_files:
-            messagebox.showinfo("Chyba", "A teď zase Olinka nedodala Excely na konvertování do PDF. Bože muj.")
+            messagebox.showerror("Chyba", "A teď zase Olinka nedodala Excely na konvertování do PDF. Bože muj.")
         else:
             self.output_console.insert(tk.END, "Všechny listy v excelu byly uloženy jako samostatné PDF.\n")
             self.output_console.see(tk.END)  # Auto-scroll to the end
