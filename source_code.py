@@ -392,7 +392,8 @@ class PlantCodeFinder(tk.Frame):
                         wb = openpyxl.load_workbook(filename)
                         ws = wb[sheet_title]
                         ws.cell(row=row, column=3).value = selected_name  # update column 3 with the selected name
-                        ws.cell(row=row, column=4).value = "CZ" + code  # concatenate "CZ" with the code and update column 4
+                        ws.cell(row=row, column=4).value = code  # update column 4 with the code
+                        ws.cell(row=row, column=5).value = "CZ"  # update column 5 with "CZ"
                         wb.save(filename)
                         break
                 top.destroy()
