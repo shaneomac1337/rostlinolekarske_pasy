@@ -10,8 +10,6 @@ import win32com.client
 import requests
 import semver
 import webbrowser
-from pdf_converter import save_all_excels_as_pdfs, save_excel_as_pdf
-
 
 current_version = "v0.3.0"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
@@ -127,7 +125,7 @@ class PlantCodeFinder(tk.Frame):
         self.quit_button = ttk.Button(main_frame, text="Ukončit", command=self.quit)
         self.quit_button.grid(row=6, column=1, padx=10, pady=(0, 10), sticky="e")
 
-        self.save_excels_as_pdfs_button = ttk.Button(main_frame, text="Uložit Excely jako PDFka", command=self.convert_to_pdf)
+        self.save_excels_as_pdfs_button = ttk.Button(main_frame, text="Uložit Excely jako PDFka", command=self.save_all_excels_as_pdfs)
         self.save_excels_as_pdfs_button.grid(row=6, column=0, padx=(170, 100), pady=(0, 10), sticky="e")
 
         # Initialize instance variables
@@ -336,13 +334,49 @@ class PlantCodeFinder(tk.Frame):
         else:
             self.output_console.insert(tk.END, "Složka missing už existuje.\n")
             self.output_console.see(tk.END)  # Auto-scroll to the end
-            self.output_console.update()  # Ensure the output console is updated  
+            self.output_console.update()  # Ensure the output console is updated
 
-    def convert_to_pdf(self):
-        save_excel_as_pdf()        
+    def save_excel_as_pdf(self, excel_file, sheet_name):
+        """Save the given sheet in excel file as pdf in the 'pdf' folder."""
+        pdf_folder = "pdf"
+        if not os.path.exists(pdf_folder):
+            os.makedirs(pdf_folder)
 
-    def convert_to_pdf(self):
-        save_all_excels_as_pdfs()        
+        pdf_file = f"{pdf_folder}/{sheet_name}.pdf"
+
+        try:
+            xlApp = win32com.client.Dispatch("Excel.Application")
+            xlApp.Visible = False
+
+            wb = xlApp.Workbooks.Open(os.path.abspath(excel_file), ReadOnly=1)
+            ws = wb.Worksheets(sheet_name)
+            ws.ExportAsFixedFormat(0, os.path.abspath(pdf_file))
+
+        except Exception as e:
+            print(f"Failed to convert {excel_file} - {sheet_name} to PDF: {e}")
+
+        finally:
+            wb.Close(SaveChanges=False)
+            xlApp.Quit()
+
+    def save_all_excels_as_pdfs(self):
+        has_excel_files = False
+        for filename in os.listdir('.'):
+            if filename.endswith('.xlsx') and filename != 'template.xlsx':
+                has_excel_files = True
+                wb = openpyxl.load_workbook(filename)
+                for sheet in wb:
+                    self.save_excel_as_pdf(filename, sheet.title)
+                    self.output_console.insert(tk.END, f"Uloženo jako:{sheet.title}\n")
+                    self.output_console.see(tk.END)  # Auto-scroll to the end
+                    self.output_console.update()  # Ensure the output console is updated
+    
+        if not has_excel_files:
+            messagebox.showerror("Chyba", "A teď zase Olinka nedodala Excely na konvertování do PDF. Bože muj.")
+        else:
+            self.output_console.insert(tk.END, "Všechny listy v excelu byly uloženy jako samostatné PDF.\n")
+            self.output_console.see(tk.END)  # Auto-scroll to the end
+            self.output_console.update()  # Ensure the output console is updated    
     
     def quit(self):
         self.master.destroy()
