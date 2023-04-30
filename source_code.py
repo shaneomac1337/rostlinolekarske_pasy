@@ -11,7 +11,7 @@ import requests
 import semver
 import webbrowser
 
-current_version = "v0.3.0"
+current_version = "v0.4.0"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -120,6 +120,9 @@ class PlantCodeFinder(tk.Frame):
         # Unload Custom Template button
         self.unload_template_button = ttk.Button(main_frame, text="Použít defaultní šablonu", command=self.unload_custom_template)
         self.unload_template_button.grid(row=6, column=0, padx=(170, 260), pady=(0, 10), sticky="e")
+        # Manual input for missing code
+        self.manual_code_button = ttk.Button(right_buttons_frame, text="Manually Add Code", command=self.manually_add_code)
+        self.manual_code_button.grid(row=2, column=0, pady=10, sticky="w")
 
         # Quit button
         self.quit_button = ttk.Button(main_frame, text="Ukončit", command=self.quit)
@@ -159,7 +162,7 @@ class PlantCodeFinder(tk.Frame):
                             download_url = asset['browser_download_url']
                             r = requests.get(download_url)
                             # Save the downloaded asset to a file
-                            with open('aplikace_v.0.3.0.exe', 'wb') as f:
+                            with open('aplikace_v.0.4.0.exe', 'wb') as f:
                                 f.write(r.content)
                 else:
                     # Do nothing if the user clicks "No"
@@ -376,7 +379,64 @@ class PlantCodeFinder(tk.Frame):
         else:
             self.output_console.insert(tk.END, "Všechny listy v excelu byly uloženy jako samostatné PDF.\n")
             self.output_console.see(tk.END)  # Auto-scroll to the end
-            self.output_console.update()  # Ensure the output console is updated    
+            self.output_console.update()  # Ensure the output console is updated
+
+    def manually_add_code(self):
+        def submit_code():
+            selected_name = name_listbox.get(name_listbox.curselection())
+            code = code_entry.get()
+            if selected_name and code:
+                self.codes[selected_name] = code
+                for filename, sheet_title, name, row in unmatched_names:
+                    if name == selected_name:
+                        wb = openpyxl.load_workbook(filename)
+                        ws = wb[sheet_title]
+                        ws.cell(row=row, column=3).value = selected_name  # update column 3 with the selected name
+                        ws.cell(row=row, column=4).value = "CZ" + code  # concatenate "CZ" with the code and update column 4
+                        wb.save(filename)
+                        break
+                top.destroy()
+                self.output_console.insert(tk.END, f"Manually added code: {selected_name} - {code}\n")
+                self.output_console.see(tk.END)
+                self.output_console.update()
+
+        def get_unmatched_names():
+            unmatched_names = []
+            for filename in os.listdir('.'):
+                if not filename.endswith('.xlsx') or filename == 'template.xlsx':
+                    continue
+
+                wb = openpyxl.load_workbook(filename)
+                for sheet in wb:
+                    ws = wb[sheet.title]
+                    for row in range(13, ws.max_row + 1):
+                        name = ws.cell(row=row, column=3).value
+                        if name:
+                            closest_match = max(self.codes.keys(), key=lambda x: fuzz.ratio(x, name))
+                            if fuzz.ratio(closest_match, name) < 80:
+                                unmatched_names.append((filename, sheet.title, name, row))
+            return unmatched_names
+
+        top = tk.Toplevel(self.master)
+        top.title("Manually Add Code")
+
+        name_label = ttk.Label(top, text="Name:")
+        name_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        name_listbox = tk.Listbox(top, selectmode=tk.SINGLE, exportselection=0)
+        name_listbox.grid(row=0, column=1, padx=10, pady=10, sticky="w")
+
+        unmatched_names = get_unmatched_names()
+        for _, _, name, _ in unmatched_names:
+            name_listbox.insert(tk.END, name)
+
+        code_label = ttk.Label(top, text="Code:")
+        code_label.grid(row=1, column=0, padx=10, pady=10, sticky="w")
+        code_entry = ttk.Entry(top)
+        code_entry.grid(row=1, column=1, padx=10, pady=10, sticky="w")
+
+        submit_button = ttk.Button(top, text="Submit", command=submit_code)
+        submit_button.grid(row=2, column=1, padx=10, pady=10, sticky="e")
+            
     
     def quit(self):
         self.master.destroy()
