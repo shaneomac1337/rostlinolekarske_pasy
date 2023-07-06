@@ -353,6 +353,7 @@ class PlantCodeFinder(tk.Frame):
 
             wb = xlApp.Workbooks.Open(os.path.abspath(excel_file), ReadOnly=1)
             ws = wb.Worksheets(sheet_name)
+            ws.PageSetup.Orientation = 2  # 2 represents landscape orientation
             ws.ExportAsFixedFormat(0, os.path.abspath(pdf_file))
 
         except Exception as e:
@@ -361,6 +362,7 @@ class PlantCodeFinder(tk.Frame):
         finally:
             wb.Close(SaveChanges=False)
             xlApp.Quit()
+
 
     def save_all_excels_as_pdfs(self):
         has_excel_files = False
