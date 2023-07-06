@@ -148,7 +148,7 @@ class PlantCodeFinder(tk.Frame):
             latest_version = latest_release['tag_name'][1:]
             if semver.compare(current_version[1:], latest_version) < 0:
                 # Display a message box to the user
-                result = messagebox.askyesno('Aktualizace dostupná', 'Nová verze toolu na pasy je k dispozici, přeje si Olinka navštívit stáhnout novou verzi z webu?')
+                result = messagebox.askyesno('Aktualizace dostupná', 'Nová verze toolu na pasy je k dispozici, přeje si Olinka stáhnout novou verzi z webu?')
 
                 if result:
                     # Open the Github page for the latest release in the user's default web browser
