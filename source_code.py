@@ -11,7 +11,7 @@ import requests
 import semver
 import webbrowser
 
-current_version = "v0.4.0"
+current_version = "v0.5.0"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
