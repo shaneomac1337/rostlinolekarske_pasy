@@ -10,8 +10,9 @@ import win32com.client
 import requests
 import semver
 import webbrowser
+import win32com.client as win32
 
-current_version = "v0.5.0"
+current_version = "v0.6.0"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -112,6 +113,8 @@ class PlantCodeFinder(tk.Frame):
 
         self.output_console = tk.Text(main_frame, wrap=tk.WORD, height=10, width=80, relief="sunken", borderwidth=1)
         self.output_console.grid(row=5, column=0, columnspan=2, padx=10, pady=10)
+        self.insert_image_button = ttk.Button(main_frame, text="Vložit EU obrázky", command=self.insert_image_to_excel)
+        self.insert_image_button.grid(row=7, column=0, padx=10, pady=(0, 10), sticky="w")
 
         # Load Custom Template button
         self.load_template_button = ttk.Button(main_frame, text="Olinky vlastní šablona", command=self.load_custom_template)
@@ -354,6 +357,9 @@ class PlantCodeFinder(tk.Frame):
             wb = xlApp.Workbooks.Open(os.path.abspath(excel_file), ReadOnly=1)
             ws = wb.Worksheets(sheet_name)
             ws.PageSetup.Orientation = 2  # 2 represents landscape orientation
+            ws.PageSetup.Zoom = False  # Turn off Zoom property
+            ws.PageSetup.FitToPagesWide = 1  # Fit to 1 page wide
+            ws.PageSetup.FitToPagesTall = 1  # Fit to 1 page tall
             ws.ExportAsFixedFormat(0, os.path.abspath(pdf_file))
 
         except Exception as e:
@@ -382,6 +388,73 @@ class PlantCodeFinder(tk.Frame):
             self.output_console.insert(tk.END, "Všechny listy v excelu byly uloženy jako samostatné PDF.\n")
             self.output_console.see(tk.END)  # Auto-scroll to the end
             self.output_console.update()  # Ensure the output console is updated
+    def insert_image_to_excel(self):
+        def insert_image(excel_file_path, image_file_path, cell_name, row_height=None, column_width=None, pic_width=None, pic_height=None):
+            # Open Excel
+            excel = win32.gencache.EnsureDispatch('Excel.Application')
+            excel.Visible = False  # If you want Excel Application to be visible during execution, set this to True
+
+            # Open Workbook
+            wb = excel.Workbooks.Open(excel_file_path)
+
+            # Iterate through each sheet in the workbook
+            for sheet in wb.Sheets:
+
+                # Get cell dimensions
+                target_cell = sheet.Range(cell_name)
+                top = target_cell.Top
+                left = target_cell.Left
+
+                # Set row height and column width for the entire sheet if provided
+                if row_height is not None:
+                    sheet.Rows.RowHeight = row_height
+                if column_width is not None:
+                    sheet.Columns.ColumnWidth = column_width
+
+                # Add picture
+                pic = sheet.Pictures().Insert(image_file_path)
+
+                # Set image position
+                pic.Top = top
+                pic.Left = left
+
+                # Set image size
+                if pic_width is not None:
+                    pic.Width = pic_width
+                if pic_height is not None:
+                    pic.Height = pic_height
+
+            # Save and Close
+            wb.Save()
+            wb.Close()
+
+            # Quit Excel
+            excel.Quit()
+
+        # Get the current working directory
+        directory_path = os.getcwd()
+        cell_name = "C6"
+
+        # Set your desired row height
+        row_height = 15.75  # Adjust this value to change the row height for all rows in the sheet
+
+        # Set your desired picture width and height
+        pic_width = 147  # Adjust this value to set the picture width
+        pic_height = 80  # Adjust this value to set the picture height
+
+        # Get a list of all Excel files in the directory
+        excel_files = [f for f in os.listdir(directory_path) if f.endswith('.xlsx') or f.endswith('.xls')]
+
+        # Run the function on each Excel file
+        for excel_file in excel_files:
+            if excel_file == 'template.xlsx':
+                continue  # Skip the template file
+            excel_file_path = os.path.join(directory_path, excel_file)
+            image_file_path = os.path.join(directory_path, "eu.png")  # The image file is in the same directory as the Excel files
+            insert_image(excel_file_path, image_file_path, cell_name, row_height, None, pic_width, pic_height)
+            self.output_console.insert(tk.END, f"Obrázek vložen do: {excel_file}\n")
+            self.output_console.see(tk.END)  # Auto-scroll to the end
+            self.output_console.update()  # Ensure the output console is updated       
 
     def manually_add_code(self):
         def submit_code():
