@@ -78,7 +78,7 @@ class PlantCodeFinder(tk.Frame):
         self.show_unmatched_button = ttk.Button(left_buttons_frame, text="Zobrazit neshody", command=self.show_unmatched_names)
         self.show_unmatched_button.grid(row=1, column=0, pady=10, sticky="w")
 
-        self.delete_codes_button = ttk.Button(right_buttons_frame, text="Smazat kódy a CZ", command=self.delete_codes_and_cz)
+        self.delete_codes_button = ttk.Button(right_buttons_frame, text="Smazat vše", command=self.delete_codes_and_cz)
         self.delete_codes_button.grid(row=0, column=0, pady=10, sticky="w")
 
         self.missing_folder_button = ttk.Button(right_buttons_frame, text="Vytvořit složku missing", command=self.create_missing_folder)
@@ -323,11 +323,12 @@ class PlantCodeFinder(tk.Frame):
                 for sheet in wb:
                     ws = wb[sheet.title]
                     for row in range(13, ws.max_row + 1):
+                        ws.cell(row=row, column=3).value = None  # This line deletes the text from column C
                         ws.cell(row=row, column=4).value = None
                         ws.cell(row=row, column=5).value = None
                 wb.save(filename)
 
-            self.output_console.insert(tk.END, "Vyčistil jsem kódy a CZ ze všech Excelů.\n")
+            self.output_console.insert(tk.END, "Je to fuč..\n")
             self.output_console.see(tk.END)  # Auto-scroll to the end
             self.output_console.update()  # Ensure the output console is updated
 
