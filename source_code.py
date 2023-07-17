@@ -12,7 +12,7 @@ import semver
 import webbrowser
 import win32com.client as win32
 
-current_version = "v0.6.0"
+current_version = "v0.6.1"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
