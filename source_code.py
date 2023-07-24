@@ -55,8 +55,14 @@ class PlantCodeFinder(tk.Frame):
         self.create_widgets()
 
     def create_widgets(self):
-        main_frame = ttk.Frame(self)
-        main_frame.grid(row=0, column=0, padx=10, pady=10)
+        # Main frame
+        main_frame = ttk.Frame(self, padding=20)
+        main_frame.grid(row=0, column=0)
+
+        # Configure the grid to have a minimum size and to expand with the window
+        for i in range(3):
+            main_frame.columnconfigure(i, weight=1, minsize=150)
+            main_frame.rowconfigure(i, weight=1, minsize=50)
 
         # Section 1: Buttons
         section1_label = ttk.Label(main_frame, text="Akce", font=("Helvetica", 12, "bold"))
@@ -65,38 +71,40 @@ class PlantCodeFinder(tk.Frame):
         buttons_frame = ttk.Frame(main_frame, borderwidth=2, relief="groove", padding=10)
         buttons_frame.grid(row=1, column=0, sticky="w")
 
-        # For 2 columns of buttons, divide the buttons_frame into 2 "sub-frames"
-        left_buttons_frame = ttk.Frame(buttons_frame)
-        left_buttons_frame.pack(side='left', padx=10)
+        # Configure the grid to have a minimum size and to expand with the window
+        for i in range(2):
+            buttons_frame.columnconfigure(i, weight=1, minsize=150)
+            buttons_frame.rowconfigure(i, weight=1, minsize=50)
 
-        right_buttons_frame = ttk.Frame(buttons_frame)
-        right_buttons_frame.pack(side='left', padx=10)
+        # Buttons grid
+        self.process_button = ttk.Button(buttons_frame, text="Zpracovat soubory", command=self.process_files)
+        self.process_button.grid(row=0, column=0, pady=10, padx=10, sticky="nsew")
 
-        self.process_button = ttk.Button(left_buttons_frame, text="Zpracovat soubory", command=self.process_files)
-        self.process_button.grid(row=0, column=0, pady=10, sticky="w")
+        self.show_unmatched_button = ttk.Button(buttons_frame, text="Zobrazit neshody", command=self.show_unmatched_names)
+        self.show_unmatched_button.grid(row=0, column=1, pady=10, padx=10, sticky="nsew")
 
-        self.show_unmatched_button = ttk.Button(left_buttons_frame, text="Zobrazit neshody", command=self.show_unmatched_names)
-        self.show_unmatched_button.grid(row=1, column=0, pady=10, sticky="w")
+        self.delete_codes_button = ttk.Button(buttons_frame, text="Smazat vše", command=self.delete_codes_and_cz)
+        self.delete_codes_button.grid(row=1, column=0, pady=10, padx=10, sticky="nsew")
 
-        self.delete_codes_button = ttk.Button(right_buttons_frame, text="Smazat vše", command=self.delete_codes_and_cz)
-        self.delete_codes_button.grid(row=0, column=0, pady=10, sticky="w")
+        self.missing_folder_button = ttk.Button(buttons_frame, text="Vytvořit složku missing", command=self.create_missing_folder)
+        self.missing_folder_button.grid(row=1, column=1, pady=10, padx=10, sticky="nsew")
 
-        self.missing_folder_button = ttk.Button(right_buttons_frame, text="Vytvořit složku missing", command=self.create_missing_folder)
-        self.missing_folder_button.grid(row=1, column=0, pady=10, sticky="w")
+        self.manual_code_button = ttk.Button(buttons_frame, text="Manually Add Code", command=self.manually_add_code)
+        self.manual_code_button.grid(row=2, column=0, pady=10, padx=10, sticky="nsew")
 
         # Automatické updaty
         self.check_updates_button = ttk.Button(main_frame, text="Zkontrolovat aktualizace", command=self.check_for_updates)
-        self.check_updates_button.grid(row=0, column=0, padx=(100, 0), pady=(0, 0), sticky="e")
+        self.check_updates_button.grid(row=0, column=1, padx=10, pady=10, sticky="e")
 
         # Label verze
         self.version_label = ttk.Label(main_frame, text=current_version, font=("Helvetica", 10, "bold"))
-        self.version_label.grid(row=0, column=1, pady=(0, 10), sticky="e")
+        self.version_label.grid(row=0, column=2, pady=10, sticky="e")
 
         # Section 2: Checkboxes
         section2_label = ttk.Label(main_frame, text="Nastavení", font=("Helvetica", 12, "bold"))
-        section2_label.grid(row=2, column=0, pady=(0, 10), sticky="w")
+        section2_label.grid(row=2, column=0, pady=(20, 10), sticky="w")
 
-        checkboxes_frame = ttk.Frame(main_frame)
+        checkboxes_frame = ttk.Frame(main_frame, padding=10)
         checkboxes_frame.grid(row=3, column=0, sticky="w")
 
         self.delete_checkbox_var = tk.BooleanVar()
@@ -109,30 +117,28 @@ class PlantCodeFinder(tk.Frame):
 
         # Section 3: Output console
         section3_label = ttk.Label(main_frame, text="Výstup", font=("Helvetica", 12, "bold"))
-        section3_label.grid(row=4, column=0, pady=(0, 10), sticky="w")
+        section3_label.grid(row=4, column=0, pady=(20, 10), sticky="w")
 
         self.output_console = tk.Text(main_frame, wrap=tk.WORD, height=10, width=80, relief="sunken", borderwidth=1)
-        self.output_console.grid(row=5, column=0, columnspan=2, padx=10, pady=10)
+        self.output_console.grid(row=5, column=0, columnspan=3, padx=10, pady=10)
+
         self.insert_image_button = ttk.Button(main_frame, text="Vložit EU obrázky", command=self.insert_image_to_excel)
-        self.insert_image_button.grid(row=7, column=0, padx=10, pady=(0, 10), sticky="w")
+        self.insert_image_button.grid(row=6, column=0, padx=10, pady=(0, 10), sticky="w")
 
         # Load Custom Template button
         self.load_template_button = ttk.Button(main_frame, text="Olinky vlastní šablona", command=self.load_custom_template)
-        self.load_template_button.grid(row=6, column=0, padx=10, pady=(0, 10), sticky="w")
+        self.load_template_button.grid(row=6, column=1, padx=10, pady=(0, 10), sticky="w")
 
         # Unload Custom Template button
         self.unload_template_button = ttk.Button(main_frame, text="Použít defaultní šablonu", command=self.unload_custom_template)
-        self.unload_template_button.grid(row=6, column=0, padx=(170, 260), pady=(0, 10), sticky="e")
-        # Manual input for missing code
-        self.manual_code_button = ttk.Button(right_buttons_frame, text="Manually Add Code", command=self.manually_add_code)
-        self.manual_code_button.grid(row=2, column=0, pady=10, sticky="w")
+        self.unload_template_button.grid(row=6, column=2, padx=10, pady=(0, 10), sticky="w")
 
         # Quit button
         self.quit_button = ttk.Button(main_frame, text="Ukončit", command=self.quit)
-        self.quit_button.grid(row=6, column=1, padx=10, pady=(0, 10), sticky="e")
+        self.quit_button.grid(row=7, column=2, padx=10, pady=(0, 10), sticky="e")
 
         self.save_excels_as_pdfs_button = ttk.Button(main_frame, text="Uložit Excely jako PDFka", command=self.save_all_excels_as_pdfs)
-        self.save_excels_as_pdfs_button.grid(row=6, column=0, padx=(170, 100), pady=(0, 10), sticky="e")
+        self.save_excels_as_pdfs_button.grid(row=7, column=0, padx=10, pady=(0, 10), sticky="w")
 
         # Initialize instance variables
         self.template_wb = openpyxl.load_workbook(self.get_template())
