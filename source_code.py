@@ -89,12 +89,12 @@ class PlantCodeFinder(tk.Frame):
         self.missing_folder_button = ttk.Button(buttons_frame, text="Vytvořit složku missing", command=self.create_missing_folder)
         self.missing_folder_button.grid(row=1, column=1, pady=10, padx=10, sticky="nsew")
 
-        self.manual_code_button = ttk.Button(buttons_frame, text="Manually Add Code", command=self.manually_add_code)
+        self.manual_code_button = ttk.Button(buttons_frame, text="Přidat kód", command=self.manually_add_code)
         self.manual_code_button.grid(row=2, column=0, pady=10, padx=10, sticky="nsew")
 
         # Automatické updaty
-        self.check_updates_button = ttk.Button(main_frame, text="Zkontrolovat aktualizace", command=self.check_for_updates)
-        self.check_updates_button.grid(row=0, column=1, padx=10, pady=10, sticky="e")
+        self.check_updates_button = ttk.Button(buttons_frame, text="Zkontrolovat aktualizace", command=self.check_for_updates)
+        self.check_updates_button.grid(row=2, column=1, padx=10, pady=10, sticky="nsew")
 
         # Label verze
         self.version_label = ttk.Label(main_frame, text=current_version, font=("Helvetica", 10, "bold"))
@@ -479,7 +479,7 @@ class PlantCodeFinder(tk.Frame):
                         wb.save(filename)
                         break
                 top.destroy()
-                self.output_console.insert(tk.END, f"Manually added code: {selected_name} - {code}\n")
+                self.output_console.insert(tk.END, f"Ručně přidán kód: {selected_name} - {code}\n")
                 self.output_console.see(tk.END)
                 self.output_console.update()
 
@@ -501,9 +501,9 @@ class PlantCodeFinder(tk.Frame):
             return unmatched_names
 
         top = tk.Toplevel(self.master)
-        top.title("Manually Add Code")
+        top.title("Ručně přidat kód")
 
-        name_label = ttk.Label(top, text="Name:")
+        name_label = ttk.Label(top, text="Název:")
         name_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
         name_listbox = tk.Listbox(top, selectmode=tk.SINGLE, exportselection=0)
         name_listbox.grid(row=0, column=1, padx=10, pady=10, sticky="w")
@@ -512,12 +512,12 @@ class PlantCodeFinder(tk.Frame):
         for _, _, name, _ in unmatched_names:
             name_listbox.insert(tk.END, name)
 
-        code_label = ttk.Label(top, text="Code:")
+        code_label = ttk.Label(top, text="Kód:")
         code_label.grid(row=1, column=0, padx=10, pady=10, sticky="w")
         code_entry = ttk.Entry(top)
         code_entry.grid(row=1, column=1, padx=10, pady=10, sticky="w")
 
-        submit_button = ttk.Button(top, text="Submit", command=submit_code)
+        submit_button = ttk.Button(top, text="Potvrdit", command=submit_code)
         submit_button.grid(row=2, column=1, padx=10, pady=10, sticky="e")
             
     
