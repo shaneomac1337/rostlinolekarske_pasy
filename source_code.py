@@ -12,7 +12,7 @@ import semver
 import webbrowser
 import win32com.client as win32
 
-current_version = "v0.6.2"
+current_version = "v0.6.3"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -23,7 +23,7 @@ if response.status_code == requests.codes.ok:
         # Display a message box to the user
         app = tk.Tk()
         app.withdraw()
-        result = messagebox.askyesno('Aktualizace dostupná', 'Nová verze toolu na pasy je k dispozici, přeje si Olinka navštívit stáhnout novou verzi z webu?')
+        result = messagebox.askyesno('Aktualizace dostupná', 'Nová verze toolu na pasy je k dispozici, přeje si Olinka stáhnout novou verzi z webu?')
 
         if result:
             # Otevřít GitHub k nalezení aktuální verze
@@ -190,10 +190,7 @@ class PlantCodeFinder(tk.Frame):
         return False
 
     def get_template(self):
-        if getattr(sys, 'frozen', False):
-            template_path = os.path.join(sys._MEIPASS, 'template.xlsx')
-        else:
-            template_path = 'template.xlsx'
+        template_path = 'template.xlsx'
         return template_path
 
     def load_custom_template(self):
@@ -478,10 +475,64 @@ class PlantCodeFinder(tk.Frame):
                         ws.cell(row=row, column=5).value = "CZ"  # update column 5 with "CZ"
                         wb.save(filename)
                         break
-                top.destroy()
+
+                # Load the template workbook
+                template_wb = openpyxl.load_workbook(self.get_template())
+                template_ws = template_wb.active
+
+                # Find the correct row to insert the new plant name and code
+                insert_row = None
+                for row in range(2, template_ws.max_row + 1):
+                    existing_code = template_ws.cell(row=row, column=2).value  # assuming codes are in column 2
+                    if existing_code:
+                        # Extract the numerical part from the existing code and the new code
+                        existing_code_num = int(''.join(filter(str.isdigit, existing_code)))
+                        new_code_num = int(''.join(filter(str.isdigit, code)))
+
+                        if new_code_num < existing_code_num:
+                            insert_row = row
+                            break
+
+                if insert_row is None:
+                    # If the new plant name is greater than all existing names, append it to the end
+                    insert_row = template_ws.max_row + 1
+
+                # Insert a new row at the correct position
+                template_ws.insert_rows(insert_row)
+
+                # Write the new plant name and code to the template
+                name_cell = template_ws.cell(row=insert_row, column=1)
+                code_cell = template_ws.cell(row=insert_row, column=2)
+                cz_cell = template_ws.cell(row=insert_row, column=3)
+
+                name_cell.value = selected_name
+                code_cell.value = code
+                cz_cell.value = "CZ"  # add 'CZ' to the column next to the code
+
+                # Create a border
+                border = openpyxl.styles.Border(left=openpyxl.styles.Side(style='thin'),
+                                                right=openpyxl.styles.Side(style='thin'),
+                                                top=openpyxl.styles.Side(style='thin'),
+                                                bottom=openpyxl.styles.Side(style='thin'))
+
+                # Apply the border to the cells
+                name_cell.border = border
+                code_cell.border = border
+                cz_cell.border = border  # apply the border to the 'CZ' cell
+
+                # Save the template workbook
+                template_wb.save(self.get_template())
+
+                # Clear the code entry field for the next input
+                code_entry.delete(0, 'end')
+
                 self.output_console.insert(tk.END, f"Ručně přidán kód: {selected_name} - {code}\n")
                 self.output_console.see(tk.END)
                 self.output_console.update()
+
+            # Add a "Close" button to close the window
+                close_button = ttk.Button(top, text="Close", command=top.destroy)
+                close_button.grid(row=3, column=1, padx=10, pady=10, sticky="e")
 
         def get_unmatched_names():
             unmatched_names = []
@@ -494,7 +545,7 @@ class PlantCodeFinder(tk.Frame):
                     ws = wb[sheet.title]
                     for row in range(13, ws.max_row + 1):
                         name = ws.cell(row=row, column=3).value
-                        if name:
+                        if name and name != "CZ":
                             closest_match = max(self.codes.keys(), key=lambda x: fuzz.ratio(x, name))
                             if fuzz.ratio(closest_match, name) < 80:
                                 unmatched_names.append((filename, sheet.title, name, row))
@@ -503,10 +554,20 @@ class PlantCodeFinder(tk.Frame):
         top = tk.Toplevel(self.master)
         top.title("Ručně přidat kód")
 
+        # Set the default size of the window
+        top.geometry("800x600")  # You can adjust the size as per your requirement
+
+
+        # Configure the row and column containing the listbox to expand
+        top.grid_rowconfigure(0, weight=1)
+        top.grid_columnconfigure(1, weight=1)
+
         name_label = ttk.Label(top, text="Název:")
         name_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+
+        # Make the listbox expand when the window is resized
         name_listbox = tk.Listbox(top, selectmode=tk.SINGLE, exportselection=0)
-        name_listbox.grid(row=0, column=1, padx=10, pady=10, sticky="w")
+        name_listbox.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")  # "nsew" means the widget should expand in all directions
 
         unmatched_names = get_unmatched_names()
         for _, _, name, _ in unmatched_names:
