@@ -11,8 +11,9 @@ import requests
 import semver
 import webbrowser
 import win32com.client as win32
+from openpyxl.styles import PatternFill
 
-current_version = "v0.6.3"
+current_version = "v0.6.4"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -124,14 +125,6 @@ class PlantCodeFinder(tk.Frame):
 
         self.insert_image_button = ttk.Button(main_frame, text="Vložit EU obrázky", command=self.insert_image_to_excel)
         self.insert_image_button.grid(row=6, column=0, padx=10, pady=(0, 10), sticky="w")
-
-        # Load Custom Template button
-        self.load_template_button = ttk.Button(main_frame, text="Olinky vlastní šablona", command=self.load_custom_template)
-        self.load_template_button.grid(row=6, column=1, padx=10, pady=(0, 10), sticky="w")
-
-        # Unload Custom Template button
-        self.unload_template_button = ttk.Button(main_frame, text="Použít defaultní šablonu", command=self.unload_custom_template)
-        self.unload_template_button.grid(row=6, column=2, padx=10, pady=(0, 10), sticky="w")
 
         # Quit button
         self.quit_button = ttk.Button(main_frame, text="Ukončit", command=self.quit)
@@ -247,20 +240,19 @@ class PlantCodeFinder(tk.Frame):
 
 
     def process_files(self):
-    # Check if there are any Excel files to process
+        # Check if there are any Excel files to process
         if not self.has_excel_files():
             messagebox.showwarning("Kde jsou sakra Excely???", "Nejdřív mi musí Olinka navalit nějaký ten Excel do stejné složky (muže jich být nespočet), kde jsem byl spuštěn. Tak je koukej vysolit!!! Nebo vyšli Edíka s Kačenkou ať je donesou...")
             return
 
-         # Create a "missing" folder if it doesn't exist
+        # Create a "missing" folder if it doesn't exist
         if not os.path.exists("missing"):
             os.makedirs("missing")
-            
 
         # Process all Excel files in the current directory
         for filename in os.listdir('.'):
             # Skip non-Excel files and the template file
-            if not filename.endswith('.xlsx') or filename == 'template.xlsx':
+            if not filename.endswith('.xlsx') or filename == 'template.xlsx' or filename == 'temporary.xlsx':
                 continue
 
             # Load the Excel file
@@ -270,6 +262,9 @@ class PlantCodeFinder(tk.Frame):
             for sheet in wb:
                 # Get the active sheet
                 ws = wb[sheet.title]
+
+                # Set the width of Column C to 48.71
+                ws.column_dimensions['C'].width = 48.71
 
                 # Process all rows in the sheet and add missing plant codes
                 missing_names = []
@@ -416,9 +411,6 @@ class PlantCodeFinder(tk.Frame):
                 if column_width is not None:
                     sheet.Columns.ColumnWidth = column_width
 
-                # Set column C width to 48
-                sheet.Columns("C:C").ColumnWidth = 48
-
                 # Add picture
                 pic = sheet.Pictures().Insert(image_file_path)
 
@@ -439,7 +431,6 @@ class PlantCodeFinder(tk.Frame):
             # Quit Excel
             excel.Quit()
 
-
         # Get the current working directory
         directory_path = os.getcwd()
         cell_name = "C6"
@@ -456,16 +447,19 @@ class PlantCodeFinder(tk.Frame):
 
         # Run the function on each Excel file
         for excel_file in excel_files:
-            if excel_file == 'template.xlsx':
-                continue  # Skip the template file
+            if excel_file == 'template.xlsx' or excel_file == 'temporary.xlsx':
+                continue  # Skip the template file and temporary file
             excel_file_path = os.path.join(directory_path, excel_file)
             image_file_path = os.path.join(directory_path, "eu.png")  # The image file is in the same directory as the Excel files
             insert_image(excel_file_path, image_file_path, cell_name, row_height, None, pic_width, pic_height)
             self.output_console.insert(tk.END, f"Obrázek vložen do: {excel_file}\n")
             self.output_console.see(tk.END)  # Auto-scroll to the end
-            self.output_console.update()  # Ensure the output console is updated       
+            self.output_console.update()  # Ensure the output console is updated      
 
     def manually_add_code(self):
+        # Create a list to store the added codes
+        added_codes = []
+
         def submit_code():
             selected_name = name_listbox.get(name_listbox.curselection())
             code = code_entry.get()
@@ -481,14 +475,33 @@ class PlantCodeFinder(tk.Frame):
                         wb.save(filename)
                         break
 
-                # Load the template workbook
-                template_wb = openpyxl.load_workbook(self.get_template())
-                template_ws = template_wb.active
+                # Add the new code to the list of added codes
+                added_codes.append((selected_name, code, "CZ"))
 
+                # Clear the code entry field for the next input
+                code_entry.delete(0, 'end')
+
+                self.output_console.insert(tk.END, f"Ručně přidán kód: {selected_name} - {code}\n")
+                self.output_console.see(tk.END)
+                self.output_console.update()
+
+        def write_to_temporary():
+            # Load the temporary workbook
+            temporary_wb = openpyxl.load_workbook('temporary.xlsx')
+            temporary_ws = temporary_wb.active
+
+            # Create a border
+            border = openpyxl.styles.Border(left=openpyxl.styles.Side(style='thin'),
+                                            right=openpyxl.styles.Side(style='thin'),
+                                            top=openpyxl.styles.Side(style='thin'),
+                                            bottom=openpyxl.styles.Side(style='thin'))
+
+            # Write the added codes to the temporary workbook
+            for selected_name, code, cz in added_codes:
                 # Find the correct row to insert the new plant name and code
                 insert_row = None
-                for row in range(2, template_ws.max_row + 1):
-                    existing_code = template_ws.cell(row=row, column=2).value  # assuming codes are in column 2
+                for row in range(2, temporary_ws.max_row + 1):
+                    existing_code = temporary_ws.cell(row=row, column=2).value  # assuming codes are in column 2
                     if existing_code:
                         # Extract the numerical part from the existing code and the new code
                         existing_code_num = int(''.join(filter(str.isdigit, existing_code)))
@@ -500,44 +513,42 @@ class PlantCodeFinder(tk.Frame):
 
                 if insert_row is None:
                     # If the new plant name is greater than all existing names, append it to the end
-                    insert_row = template_ws.max_row + 1
+                    insert_row = temporary_ws.max_row + 1
 
                 # Insert a new row at the correct position
-                template_ws.insert_rows(insert_row)
+                temporary_ws.insert_rows(insert_row)
 
-                # Write the new plant name and code to the template
-                name_cell = template_ws.cell(row=insert_row, column=1)
-                code_cell = template_ws.cell(row=insert_row, column=2)
-                cz_cell = template_ws.cell(row=insert_row, column=3)
+                # Write the new plant name and code to the temporary
+                name_cell = temporary_ws.cell(row=insert_row, column=1)
+                code_cell = temporary_ws.cell(row=insert_row, column=2)
+                cz_cell = temporary_ws.cell(row=insert_row, column=3)
 
                 name_cell.value = selected_name
                 code_cell.value = code
-                cz_cell.value = "CZ"  # add 'CZ' to the column next to the code
-
-                # Create a border
-                border = openpyxl.styles.Border(left=openpyxl.styles.Side(style='thin'),
-                                                right=openpyxl.styles.Side(style='thin'),
-                                                top=openpyxl.styles.Side(style='thin'),
-                                                bottom=openpyxl.styles.Side(style='thin'))
+                cz_cell.value = cz  # add 'CZ' to the column next to the code
 
                 # Apply the border to the cells
                 name_cell.border = border
                 code_cell.border = border
                 cz_cell.border = border  # apply the border to the 'CZ' cell
 
-                # Save the template workbook
-                template_wb.save(self.get_template())
+            # Save the temporary workbook
+            temporary_wb.save('temporary.xlsx')
 
-                # Clear the code entry field for the next input
-                code_entry.delete(0, 'end')
+        from openpyxl.styles import PatternFill
 
-                self.output_console.insert(tk.END, f"Ručně přidán kód: {selected_name} - {code}\n")
-                self.output_console.see(tk.END)
-                self.output_console.update()
+        def clear_temporary():
+            # Load the temporary workbook
+            temporary_wb = openpyxl.load_workbook('temporary.xlsx')
+            temporary_ws = temporary_wb.active
 
-            # Add a "Close" button to close the window
-                close_button = ttk.Button(top, text="Close", command=top.destroy)
-                close_button.grid(row=3, column=1, padx=10, pady=10, sticky="e")
+            # Delete all rows
+            for row in temporary_ws.iter_rows():
+                temporary_ws.delete_rows(row[0].row, len(row))
+
+            # Save the temporary workbook
+            temporary_wb.save('temporary.xlsx')
+            
 
         def get_unmatched_names():
             unmatched_names = []
@@ -555,6 +566,7 @@ class PlantCodeFinder(tk.Frame):
                             if fuzz.ratio(closest_match, name) < 80:
                                 unmatched_names.append((filename, sheet.title, name, row))
             return unmatched_names
+        
 
         top = tk.Toplevel(self.master)
         top.title("Ručně přidat kód")
@@ -585,6 +597,25 @@ class PlantCodeFinder(tk.Frame):
 
         submit_button = ttk.Button(top, text="Potvrdit", command=submit_code)
         submit_button.grid(row=2, column=1, padx=10, pady=10, sticky="e")
+
+        # Add a "Write to Temporary" button to write the added codes to temporary.xlsx
+        write_button = ttk.Button(top, text="Zapsat do dočasné", command=write_to_temporary)
+        write_button.grid(row=3, column=1, padx=10, pady=10, sticky="e")
+
+        # Add a "Clear Temporary" button to clear all data from temporary.xlsx
+        clear_button = ttk.Button(top, text="Vyčistit dočasnou", command=clear_temporary)
+        clear_button.grid(row=4, column=1, padx=10, pady=10, sticky="e")
+
+        def copy_to_clipboard(event):
+            # Get the selected item
+            selected_item = name_listbox.get(name_listbox.curselection())
+
+            # Copy the selected item to the clipboard
+            top.clipboard_clear()
+            top.clipboard_append(selected_item)
+
+        # Bind the Ctrl+C key to the copy_to_clipboard function
+        name_listbox.bind('<Control-c>', copy_to_clipboard)
             
     
     def quit(self):
