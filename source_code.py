@@ -392,6 +392,7 @@ class PlantCodeFinder(tk.Frame):
             self.output_console.insert(tk.END, "Všechny listy v excelu byly uloženy jako samostatné PDF.\n")
             self.output_console.see(tk.END)  # Auto-scroll to the end
             self.output_console.update()  # Ensure the output console is updated
+
     def insert_image_to_excel(self):
         def insert_image(excel_file_path, image_file_path, cell_name, row_height=None, column_width=None, pic_width=None, pic_height=None):
             # Open Excel
@@ -415,6 +416,9 @@ class PlantCodeFinder(tk.Frame):
                 if column_width is not None:
                     sheet.Columns.ColumnWidth = column_width
 
+                # Set column C width to 48
+                sheet.Columns("C:C").ColumnWidth = 48
+
                 # Add picture
                 pic = sheet.Pictures().Insert(image_file_path)
 
@@ -434,6 +438,7 @@ class PlantCodeFinder(tk.Frame):
 
             # Quit Excel
             excel.Quit()
+
 
         # Get the current working directory
         directory_path = os.getcwd()
