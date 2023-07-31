@@ -13,7 +13,7 @@ import webbrowser
 import win32com.client as win32
 from openpyxl.styles import PatternFill
 
-current_version = "v0.7.0"
+current_version = "v0.7.1"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -214,7 +214,7 @@ class PlantCodeFinder(tk.Frame):
     def show_unmatched_names(self):
         unmatched_names = []
         for filename in os.listdir('.'):
-            if not filename.endswith('.xlsx') or filename == 'template.xlsx':
+            if not filename.endswith('.xlsx') or filename == 'template.xlsx' or filename == 'temporary.xlsx':
                 continue
 
             wb = openpyxl.load_workbook(filename)
@@ -465,11 +465,19 @@ class PlantCodeFinder(tk.Frame):
             # Get the unmatched names
             unmatched_names = get_unmatched_names()
 
+            # Create a set to store the names that have been added to the listbox
+            added_names = set()
+
             # Populate the listbox
             for _, _, name, _ in unmatched_names:
-                name_listbox.insert(tk.END, name)
+                # Only add the name to the listbox if it hasn't been added before
+                if name not in added_names:
+                    name_listbox.insert(tk.END, name)
+                    added_names.add(name)  # Add the name to the set of added names
+
         def submit_code():
-            selected_name = name_listbox.get(name_listbox.curselection())
+            selected_index = name_listbox.curselection()[0]  # Get the index of the selected item
+            selected_name = name_listbox.get(selected_index)
             code = code_entry.get()
             if selected_name and code:
                 self.codes[selected_name] = code
@@ -489,7 +497,14 @@ class PlantCodeFinder(tk.Frame):
 
                 # Clear the code entry field for the next input
                 code_entry.delete(0, 'end')
-                populate_listbox()
+
+                # Always select the first item in the listbox after refresh
+                if name_listbox.size() > 0:  # Check if the listbox is not empty
+                    name_listbox.selection_clear(0, tk.END)  # Clear all selections
+                    name_listbox.selection_set(0)  # Select the first item
+                    name_listbox.see(0)  # Make sure the first item is visible
+                    name_listbox.event_generate("<<ListboxSelect>>")  # Generate a ListboxSelect event to update the code_entry
+                    code_entry.focus_set()  # Set the focus to the code_entry field
 
                 self.output_console.insert(tk.END, f"Ručně přidán kód: {selected_name} - {code}\n")
                 self.output_console.see(tk.END)
@@ -563,8 +578,9 @@ class PlantCodeFinder(tk.Frame):
 
         def get_unmatched_names():
             unmatched_names = []
+            added_names = set()  # Create a set to store the names that have been added
             for filename in os.listdir('.'):
-                if not filename.endswith('.xlsx') or filename == 'template.xlsx':
+                if not filename.endswith('.xlsx') or filename == 'template.xlsx' or filename == 'temporary.xlsx':
                     continue
 
                 wb = openpyxl.load_workbook(filename)
@@ -572,10 +588,11 @@ class PlantCodeFinder(tk.Frame):
                     ws = wb[sheet.title]
                     for row in range(13, ws.max_row + 1):
                         name = ws.cell(row=row, column=3).value
-                        if name and name != "CZ":
+                        if name and name != "CZ" and name not in added_names:  # Check if the name hasn't been added before
                             closest_match = max(self.codes.keys(), key=lambda x: fuzz.ratio(x, name))
                             if fuzz.ratio(closest_match, name) < 80:
                                 unmatched_names.append((filename, sheet.title, name, row))
+                                added_names.add(name)  # Add the name to the set of added names
             return unmatched_names
 
         top = tk.Toplevel(self.master)
@@ -626,6 +643,13 @@ class PlantCodeFinder(tk.Frame):
 
         # Bind the Ctrl+C key to the copy_to_clipboard function
         name_listbox.bind('<Control-c>', copy_to_clipboard)
+
+        def on_name_select(event):
+            code_entry.focus_set()
+
+        name_listbox.bind('<ButtonRelease-1>', on_name_select)
+        # Bind the Enter key to the submit_code function
+        top.bind('<Return>', lambda event: submit_code())
             
     
     def quit(self):
