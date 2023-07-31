@@ -52,6 +52,7 @@ class PlantCodeFinder(tk.Frame):
         super().__init__(master)
         self.master = master
         self.master.title("Olinky aplikace na pasy :)")
+        self.added_codes = []
         self.grid()
         self.create_widgets()
 
@@ -457,9 +458,16 @@ class PlantCodeFinder(tk.Frame):
             self.output_console.update()  # Ensure the output console is updated      
 
     def manually_add_code(self):
-        # Create a list to store the added codes
-        added_codes = []
+        def populate_listbox():
+            # Clear the listbox
+            name_listbox.delete(0, tk.END)
 
+            # Get the unmatched names
+            unmatched_names = get_unmatched_names()
+
+            # Populate the listbox
+            for _, _, name, _ in unmatched_names:
+                name_listbox.insert(tk.END, name)
         def submit_code():
             selected_name = name_listbox.get(name_listbox.curselection())
             code = code_entry.get()
@@ -476,10 +484,12 @@ class PlantCodeFinder(tk.Frame):
                         break
 
                 # Add the new code to the list of added codes
-                added_codes.append((selected_name, code, "CZ"))
+                self.added_codes.append((selected_name, code, "CZ"))
+                populate_listbox()
 
                 # Clear the code entry field for the next input
                 code_entry.delete(0, 'end')
+                populate_listbox()
 
                 self.output_console.insert(tk.END, f"Ručně přidán kód: {selected_name} - {code}\n")
                 self.output_console.see(tk.END)
@@ -497,7 +507,7 @@ class PlantCodeFinder(tk.Frame):
                                             bottom=openpyxl.styles.Side(style='thin'))
 
             # Write the added codes to the temporary workbook
-            for selected_name, code, cz in added_codes:
+            for selected_name, code, cz in self.added_codes:
                 # Find the correct row to insert the new plant name and code
                 insert_row = None
                 for row in range(2, temporary_ws.max_row + 1):
@@ -542,9 +552,11 @@ class PlantCodeFinder(tk.Frame):
             temporary_wb = openpyxl.load_workbook('temporary.xlsx')
             temporary_ws = temporary_wb.active
 
+            # Get the number of rows
+            num_rows = temporary_ws.max_row
+
             # Delete all rows
-            for row in temporary_ws.iter_rows():
-                temporary_ws.delete_rows(row[0].row, len(row))
+            temporary_ws.delete_rows(1, num_rows)
 
             # Save the temporary workbook
             temporary_wb.save('temporary.xlsx')
@@ -566,7 +578,6 @@ class PlantCodeFinder(tk.Frame):
                             if fuzz.ratio(closest_match, name) < 80:
                                 unmatched_names.append((filename, sheet.title, name, row))
             return unmatched_names
-        
 
         top = tk.Toplevel(self.master)
         top.title("Ručně přidat kód")
