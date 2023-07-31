@@ -13,7 +13,7 @@ import webbrowser
 import win32com.client as win32
 from openpyxl.styles import PatternFill
 
-current_version = "v0.7.1"
+current_version = "v0.7.2"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -481,15 +481,6 @@ class PlantCodeFinder(tk.Frame):
             code = code_entry.get()
             if selected_name and code:
                 self.codes[selected_name] = code
-                for filename, sheet_title, name, row in unmatched_names:
-                    if name == selected_name:
-                        wb = openpyxl.load_workbook(filename)
-                        ws = wb[sheet_title]
-                        ws.cell(row=row, column=3).value = selected_name  # update column 3 with the selected name
-                        ws.cell(row=row, column=4).value = code  # update column 4 with the code
-                        ws.cell(row=row, column=5).value = "CZ"  # update column 5 with "CZ"
-                        wb.save(filename)
-                        break
 
                 # Add the new code to the list of added codes
                 self.added_codes.append((selected_name, code, "CZ"))
