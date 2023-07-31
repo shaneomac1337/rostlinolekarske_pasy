@@ -13,7 +13,7 @@ import webbrowser
 import win32com.client as win32
 from openpyxl.styles import PatternFill
 
-current_version = "v0.6.4"
+current_version = "v0.7.0"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -545,7 +545,6 @@ class PlantCodeFinder(tk.Frame):
             # Save the temporary workbook
             temporary_wb.save('temporary.xlsx')
 
-        from openpyxl.styles import PatternFill
 
         def clear_temporary():
             # Load the temporary workbook
