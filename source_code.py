@@ -804,7 +804,7 @@ class PlantCodeFinder(tk.Frame):
             listbox.delete(selected_index)
 
         # Create a button to delete the selected code
-        delete_button = ttk.Button(dialog, text="Delete Selected Code", command=delete_selected_code)
+        delete_button = ttk.Button(dialog, text="Zapomenout vybraný kód", command=delete_selected_code)
         delete_button.pack(padx=10, pady=(0, 10))
 
         # Create a function to delete all codes
@@ -813,7 +813,7 @@ class PlantCodeFinder(tk.Frame):
             listbox.delete(0, tk.END)  # Clear the listbox
 
         # Create a button to delete all codes
-        delete_all_button = ttk.Button(dialog, text="Delete All Codes", command=delete_all_codes)
+        delete_all_button = ttk.Button(dialog, text="Zapomenout všechny kódy", command=delete_all_codes)
         delete_all_button.pack(padx=10, pady=(0, 10))
 
     def send_email(self):
