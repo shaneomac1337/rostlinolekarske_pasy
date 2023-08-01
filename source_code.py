@@ -763,7 +763,7 @@ class PlantCodeFinder(tk.Frame):
     def manage_added_codes(self):
         # Create a new dialog
         dialog = tk.Toplevel(self)  # Use 'self' to refer to the main window
-        dialog.title("Manage Added Codes")
+        dialog.title("Spravovat kody v paměti")
         dialog.geometry("800x600")  # Set the size of the dialog
 
         # Create a frame to contain the listbox and scrollbar
