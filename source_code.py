@@ -13,7 +13,7 @@ import webbrowser
 import win32com.client as win32
 from openpyxl.styles import PatternFill
 
-current_version = "v0.7.2"
+current_version = "v1.0.0"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -67,7 +67,7 @@ class PlantCodeFinder(tk.Frame):
             main_frame.rowconfigure(i, weight=1, minsize=50)
 
         # Section 1: Buttons
-        section1_label = ttk.Label(main_frame, text="Akce", font=("Helvetica", 12, "bold"))
+        section1_label = ttk.Label(main_frame, text="Hlavní funkce", font=("Helvetica", 12, "bold"))
         section1_label.grid(row=0, column=0, pady=(0, 10), sticky="w")
 
         buttons_frame = ttk.Frame(main_frame, borderwidth=2, relief="groove", padding=10)
@@ -82,21 +82,20 @@ class PlantCodeFinder(tk.Frame):
         self.process_button = ttk.Button(buttons_frame, text="Zpracovat soubory", command=self.process_files)
         self.process_button.grid(row=0, column=0, pady=10, padx=10, sticky="nsew")
 
-        self.show_unmatched_button = ttk.Button(buttons_frame, text="Zobrazit neshody", command=self.show_unmatched_names)
-        self.show_unmatched_button.grid(row=0, column=1, pady=10, padx=10, sticky="nsew")
-
         self.delete_codes_button = ttk.Button(buttons_frame, text="Smazat vše", command=self.delete_codes_and_cz)
         self.delete_codes_button.grid(row=1, column=0, pady=10, padx=10, sticky="nsew")
 
-        self.missing_folder_button = ttk.Button(buttons_frame, text="Vytvořit složku missing", command=self.create_missing_folder)
-        self.missing_folder_button.grid(row=1, column=1, pady=10, padx=10, sticky="nsew")
-
         self.manual_code_button = ttk.Button(buttons_frame, text="Přidat kód", command=self.manually_add_code)
-        self.manual_code_button.grid(row=2, column=0, pady=10, padx=10, sticky="nsew")
+        self.manual_code_button.grid(row=0, column=1, pady=10, padx=10, sticky="nsew")
 
-        # Automatické updaty
-        self.check_updates_button = ttk.Button(buttons_frame, text="Zkontrolovat aktualizace", command=self.check_for_updates)
-        self.check_updates_button.grid(row=2, column=1, padx=10, pady=10, sticky="nsew")
+        self.manage_added_codes_button = ttk.Button(buttons_frame, text="Spravovat kódy v paměti", command=self.manage_added_codes)
+        self.manage_added_codes_button.grid(row=1, column=1, pady=10, padx=10, sticky="nsew")
+
+        self.save_excels_as_pdfs_button = ttk.Button(buttons_frame, text="Uložit Excely jako PDFka", command=self.save_all_excels_as_pdfs)
+        self.save_excels_as_pdfs_button.grid(row=2, column=1, padx=10, pady=10, sticky="nsew")
+
+        self.insert_image_button = ttk.Button(buttons_frame, text="Vložit EU obrázky", command=self.insert_image_to_excel)
+        self.insert_image_button.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
 
         # Label verze
         self.version_label = ttk.Label(main_frame, text=current_version, font=("Helvetica", 10, "bold"))
@@ -104,10 +103,10 @@ class PlantCodeFinder(tk.Frame):
 
         # Section 2: Checkboxes
         section2_label = ttk.Label(main_frame, text="Nastavení", font=("Helvetica", 12, "bold"))
-        section2_label.grid(row=2, column=0, pady=(20, 10), sticky="w")
+        section2_label.grid(row=4, column=0, pady=(20, 10), sticky="w")
 
         checkboxes_frame = ttk.Frame(main_frame, padding=10)
-        checkboxes_frame.grid(row=3, column=0, sticky="w")
+        checkboxes_frame.grid(row=5, column=0, sticky="w")
 
         self.delete_checkbox_var = tk.BooleanVar()
         self.delete_checkbox = ttk.Checkbutton(checkboxes_frame, text="Smazat soubory, kde je vše v poho", variable=self.delete_checkbox_var)
@@ -119,20 +118,47 @@ class PlantCodeFinder(tk.Frame):
 
         # Section 3: Output console
         section3_label = ttk.Label(main_frame, text="Výstup", font=("Helvetica", 12, "bold"))
-        section3_label.grid(row=4, column=0, pady=(20, 10), sticky="w")
+        section3_label.grid(row=6, column=0, pady=(20, 10), sticky="w")
 
         self.output_console = tk.Text(main_frame, wrap=tk.WORD, height=10, width=80, relief="sunken", borderwidth=1)
-        self.output_console.grid(row=5, column=0, columnspan=3, padx=10, pady=10)
-
-        self.insert_image_button = ttk.Button(main_frame, text="Vložit EU obrázky", command=self.insert_image_to_excel)
-        self.insert_image_button.grid(row=6, column=0, padx=10, pady=(0, 10), sticky="w")
+        self.output_console.grid(row=7, column=0, columnspan=3, padx=10, pady=10)
 
         # Quit button
         self.quit_button = ttk.Button(main_frame, text="Ukončit", command=self.quit)
-        self.quit_button.grid(row=7, column=2, padx=10, pady=(0, 10), sticky="e")
+        self.quit_button.grid(row=9, column=2, padx=10, pady=(0, 10), sticky="e")
+                
+        # Section 4: New Buttons
+        section4_label = ttk.Label(main_frame, text="Doplňující funkce", font=("Helvetica", 12, "bold"))
+        section4_label.grid(row=2, column=0, pady=(20, 10), sticky="w")
 
-        self.save_excels_as_pdfs_button = ttk.Button(main_frame, text="Uložit Excely jako PDFka", command=self.save_all_excels_as_pdfs)
-        self.save_excels_as_pdfs_button.grid(row=7, column=0, padx=10, pady=(0, 10), sticky="w")
+        new_buttons_frame = ttk.Frame(main_frame, borderwidth=2, relief="groove", padding=10)
+        new_buttons_frame.grid(row=3, column=0, sticky="w")
+
+        # Configure the grid to have a minimum size and to expand with the window
+        for i in range(2):
+            new_buttons_frame.columnconfigure(i, weight=1, minsize=150)
+            new_buttons_frame.rowconfigure(i, weight=1, minsize=50)
+
+        # New buttons grid
+
+        self.load_temporary_button = ttk.Button(new_buttons_frame, text="Načíst z dočasné", command=self.load_from_temporary)
+        self.load_temporary_button.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+
+        self.send_email_button = ttk.Button(new_buttons_frame, text="Pochvala pro Martínka", command=self.send_email)
+        self.send_email_button.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
+
+        self.check_updates_button = ttk.Button(new_buttons_frame, text="Zkontrolovat aktualizace", command=self.check_for_updates)
+        self.check_updates_button.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
+
+        self.show_unmatched_button = ttk.Button(new_buttons_frame, text="Zobrazit neshody", command=self.show_unmatched_names)
+        self.show_unmatched_button.grid(row=0, column=1, pady=10, padx=10, sticky="nsew")
+
+        self.missing_folder_button = ttk.Button(new_buttons_frame, text="Vytvořit složku missing", command=self.create_missing_folder)
+        self.missing_folder_button.grid(row=2, column=1, pady=10, padx=10, sticky="nsew")
+
+        self.send_second_email_button = ttk.Button(new_buttons_frame, text="Bída pro Martínka", command=self.send_second_email)
+        self.send_second_email_button.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
+        
 
         # Initialize instance variables
         self.template_wb = openpyxl.load_workbook(self.get_template())
@@ -373,7 +399,7 @@ class PlantCodeFinder(tk.Frame):
     def save_all_excels_as_pdfs(self):
         has_excel_files = False
         for filename in os.listdir('.'):
-            if filename.endswith('.xlsx') and filename != 'template.xlsx':
+            if filename.endswith('.xlsx') and filename != 'template.xlsx' and filename != 'temporary.xlsx':
                 has_excel_files = True
                 wb = openpyxl.load_workbook(filename)
                 for sheet in wb:
@@ -502,6 +528,13 @@ class PlantCodeFinder(tk.Frame):
                 self.output_console.update()
 
         def write_to_temporary():
+            # Check if there are any added codes
+            if not self.added_codes:
+                self.output_console.insert(tk.END, "Není tu nic, co by Olinka mohla zapsat do dočasné :(\n")
+                self.output_console.see(tk.END)
+                self.output_console.update()
+                return
+
             # Load the temporary workbook
             temporary_wb = openpyxl.load_workbook('temporary.xlsx')
             temporary_ws = temporary_wb.active
@@ -543,6 +576,11 @@ class PlantCodeFinder(tk.Frame):
                 code_cell.value = code
                 cz_cell.value = cz  # add 'CZ' to the column next to the code
 
+                # Or, if you want to add it to the output console in your GUI:
+                self.output_console.insert(tk.END, f"Zapsáno do dočasné: {selected_name} - {code} - {cz}\n")
+                self.output_console.see(tk.END)
+                self.output_console.update()
+
                 # Apply the border to the cells
                 name_cell.border = border
                 code_cell.border = border
@@ -559,6 +597,24 @@ class PlantCodeFinder(tk.Frame):
 
             # Get the number of rows
             num_rows = temporary_ws.max_row
+
+            # Check if the workbook is empty
+            if num_rows == 1 and not any(temporary_ws.cell(row=1, column=i).value for i in range(1, temporary_ws.max_column + 1)):
+                self.output_console.insert(tk.END, "V dočasné nic není.\n")
+                self.output_console.see(tk.END)
+                self.output_console.update()
+                return
+
+            # Log and delete all rows
+            for row in range(1, num_rows + 1):
+                name = temporary_ws.cell(row=row, column=1).value
+                code = temporary_ws.cell(row=row, column=2).value
+                cz = temporary_ws.cell(row=row, column=3).value
+
+                # Or, if you want to add it to the output console in your GUI:
+                self.output_console.insert(tk.END, f"Smazáno z dočasné: {name} - {code} - {cz}\n")
+                self.output_console.see(tk.END)
+                self.output_console.update()
 
             # Delete all rows
             temporary_ws.delete_rows(1, num_rows)
@@ -641,7 +697,150 @@ class PlantCodeFinder(tk.Frame):
         name_listbox.bind('<ButtonRelease-1>', on_name_select)
         # Bind the Enter key to the submit_code function
         top.bind('<Return>', lambda event: submit_code())
-            
+
+
+    def load_from_temporary(self):
+        # Load the temporary workbook
+        temporary_wb = openpyxl.load_workbook('temporary.xlsx')
+        temporary_ws = temporary_wb.active
+
+        # Get the number of rows
+        num_rows = temporary_ws.max_row
+
+        # Check if the workbook is empty
+        if num_rows == 1 and not any(temporary_ws.cell(row=1, column=i).value for i in range(1, temporary_ws.max_column + 1)):
+            self.output_console.insert(tk.END, "Dočasná je prázdná.\n")
+            self.output_console.see(tk.END)
+            self.output_console.update()
+            return
+
+        # Clear self.added_codes
+        self.added_codes.clear()
+
+        # Load the codes from the temporary workbook
+        for row in range(2, num_rows + 1):
+            name = temporary_ws.cell(row=row, column=1).value
+            code = temporary_ws.cell(row=row, column=2).value
+            cz = temporary_ws.cell(row=row, column=3).value
+
+            # Add the code to self.codes and self.added_codes
+            self.codes[name] = code
+            self.added_codes.append((name, code, cz))
+
+            # Print the loaded data to the console
+            # Or, if you want to add it to the output console in your GUI:
+            self.output_console.insert(tk.END, f"Načteno z dočasné: {name} - {code} - {cz}\n")
+            self.output_console.see(tk.END)
+            self.output_console.update()
+
+    def forget_added_codes(self, print_message=True):
+        # Check if there are any added codes
+        if not self.added_codes:
+            self.output_console.insert(tk.END, "Žádné kódy k zapomenutí.\n")
+            self.output_console.see(tk.END)
+            self.output_console.update()
+            return
+
+        # Remove the added codes from self.codes
+        for name, code, cz in self.added_codes:
+            if name in self.codes:
+                del self.codes[name]
+
+            # Print a message to the console for each code that is removed
+            self.output_console.insert(tk.END, f"Odebrán kód: {name} - {code} - {cz}\n")
+            self.output_console.see(tk.END)
+            self.output_console.update()
+
+        # Clear the added_codes list
+        self.added_codes.clear()
+
+        # Print a message to the console
+        if print_message:
+            self.output_console.insert(tk.END, "Všechny ručně přidané kódy byly zapomenuty.\n")
+            self.output_console.see(tk.END)
+            self.output_console.update()
+
+    def manage_added_codes(self):
+        # Create a new dialog
+        dialog = tk.Toplevel(self)  # Use 'self' to refer to the main window
+        dialog.title("Manage Added Codes")
+        dialog.geometry("800x600")  # Set the size of the dialog
+
+        # Create a frame to contain the listbox and scrollbar
+        frame = tk.Frame(dialog)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Create a scrollbar
+        scrollbar = tk.Scrollbar(frame)
+        scrollbar.pack(side="right", fill="y")
+
+        # Create a listbox to display the added codes
+        listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set)
+        listbox.pack(side="left", fill="both", expand=True)
+
+        # Configure the scrollbar to scroll the listbox
+        scrollbar.config(command=listbox.yview)
+
+        # Populate the listbox with the added codes
+        for name, code, cz in self.added_codes:
+            listbox.insert(tk.END, f"{name} - {code} - {cz}")
+
+        # Create a function to delete the selected code
+        def delete_selected_code():
+            selected_index = listbox.curselection()[0]  # Get the index of the selected item
+            selected_code = self.added_codes[selected_index]
+
+            # Remove the selected code from self.codes and self.added_codes
+            if selected_code[0] in self.codes:
+                del self.codes[selected_code[0]]
+            del self.added_codes[selected_index]
+
+            # Print a message to the console
+            self.output_console.insert(tk.END, f"Ručně přidaný kód {selected_code} byl zapomenut.\n")
+            self.output_console.see(tk.END)
+            self.output_console.update()
+
+            # Remove the selected code from the listbox
+            listbox.delete(selected_index)
+
+        # Create a button to delete the selected code
+        delete_button = ttk.Button(dialog, text="Delete Selected Code", command=delete_selected_code)
+        delete_button.pack(padx=10, pady=(0, 10))
+
+        # Create a function to delete all codes
+        def delete_all_codes():
+            self.forget_added_codes()  # Use the forget_added_codes function to delete all codes
+            listbox.delete(0, tk.END)  # Clear the listbox
+
+        # Create a button to delete all codes
+        delete_all_button = ttk.Button(dialog, text="Delete All Codes", command=delete_all_codes)
+        delete_all_button.pack(padx=10, pady=(0, 10))
+
+    def send_email(self):
+        outlook = win32.Dispatch('outlook.application')
+        mail = outlook.CreateItem(0)
+        mail.Subject = 'Pochvala pro Martínka'
+        mail.HTMLBody = '<p style="font-family:Roboto;">Milý Martínku,<br><br>moc ti děkuji za skvělou aplikaci na pasy, už bych si to dnes nedokázala vůbec představit bez ní, strašně moc mi pomáhá a můj život je díky tomu snadnější.<br><br>S pozdravem<br>Olinka</p>'
+        mail.To = 'martinpenkava1@gmail.com'
+        # Uncomment the line below if you want to send the email
+        mail.Send()
+
+        self.output_console.insert(tk.END, "Pochvala uspěšně odeslána Martínkovi na email, bude mít radost :)\n")
+        self.output_console.see(tk.END)
+        self.output_console.update()
+
+    def send_second_email(self):
+        outlook = win32.Dispatch('outlook.application')
+        mail = outlook.CreateItem(0)
+        mail.Subject = 'Nejde to vole'
+        mail.HTMLBody = '<p style="font-family:Roboto;">Ahoj,<br><br>Bohužel, mám pro tebe špatné zprávy. Aplikace na pasy mi dnes nefunguje tak, jak bych si představovala Koukej s tim něco udělat a nebo ještě líp strč si ten svuj tool už do prdele, nikdo na něj neni zvědavej!<br><br>S pozdravem<br>Nasraná Olga</p>'
+        mail.To = 'martinpenkava1@gmail.com'
+        # Uncomment the line below if you want to send the email
+        mail.Send()
+
+        self.output_console.insert(tk.END, "Bída pro Martínka odeslána na email, Martínek bude smutný, zlá Olina!! :(\n")
+        self.output_console.see(tk.END)
+        self.output_console.update()    
     
     def quit(self):
         self.master.destroy()
