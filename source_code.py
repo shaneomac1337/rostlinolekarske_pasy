@@ -1064,7 +1064,6 @@ class PlantCodeFinder(tk.Frame):
                     f.write(f"E-mail odeslán na {recipient} s přílohou {attachment_name}\n")
 
                     # Output to the console
-                    self.output_console.insert(tk.END, f"Připravuji e-mail pro: {recipient} s přílohou: {attachment_name}\n")
 
                     dialog.update_idletasks()  # Force the GUI to update
 
