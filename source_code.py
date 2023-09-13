@@ -1053,11 +1053,24 @@ class PlantCodeFinder(tk.Frame):
             # Get the BCC recipient from the entry field
             bcc_recipient = bcc_entry.get()
 
-            for _, row in email_list.iterrows():
-                recipient = row['Email']
-                attachment_name = row['Attachment']
-                self.send_email_with_attachment(recipient, bcc_recipient, attachment_name)
-                dialog.update_idletasks()  # Force the GUI to update
+            # Open the log file in append mode
+            with open('email.log', 'a') as f:
+                for _, row in email_list.iterrows():
+                    recipient = row['Email']
+                    attachment_name = row['Attachment']
+                    self.send_email_with_attachment(recipient, bcc_recipient, attachment_name)
+                    
+                    # Write the output to the log file
+                    f.write(f"E-mail odeslán na {recipient} s přílohou {attachment_name}\n")
+
+                    # Output to the console
+                    self.output_console.insert(tk.END, f"Připravuji e-mail pro: {recipient} s přílohou: {attachment_name}\n")
+
+                    dialog.update_idletasks()  # Force the GUI to update
+
+            self.output_console.insert(tk.END, "Olinka poslala mail všem blbečkům\n")
+
+
 
 
         # Create a button to send emails to all recipients
@@ -1085,7 +1098,7 @@ class PlantCodeFinder(tk.Frame):
                 return
 
         mail.Send()
-        self.output_console.insert(tk.END, f"Email sent to: {recipient}\n")
+        self.output_console.insert(tk.END, f"E-mail odeslán na: {recipient}\n")
         time.sleep(5)  # Wait for 5 seconds
 
 
