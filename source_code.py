@@ -13,11 +13,12 @@ import webbrowser
 import win32com.client as win32
 from openpyxl.styles import PatternFill
 import pandas as pd
-import openpyxl
+from openpyxl import load_workbook
+import time
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import Font, Border, Side, Alignment
 
-current_version = "v1.0.1"
+current_version = "v1.0.2"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -60,6 +61,43 @@ class PlantCodeFinder(tk.Frame):
         self.grid()
         self.create_widgets()
 
+        self.body = '''
+        <html>
+        <head>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                font-size: 12px;
+            }
+            .larger-text {
+                font-size: 18px;
+            }
+        </style>
+        </head>
+        <body>
+            Vážený zákazníku,
+        <br>
+        <br>
+        ode dne 14. prosince 2019 nabývá účinnosti nové nařízení Evropského parlamentu, a to nám ukládá jako prodejci povinnosti při prodeji rostlin dodat zákazníkovi Rostlinolékařský pas. Je to z důvodu, aby se evidoval pohyb prodávaných rostlin po území Evropské unie.
+        <br> 
+        <br>
+        <b>Více informací, proč došlo k této povinnosti se můžete dočíst na našem webu, v horním panelu (Nákupy, registrace). Vám, jakožto zákazníkovi, z toho neplyne žádná povinnost a na tuto automaticky generovanou zprávu neodpovídejte.</b> 
+        <br>
+        <br>
+        <b class="larger-text">Více informací o nařízení</b><br>
+        <br>
+        Nařízení Evropského parlamentu a Rady (EU) 2016/2031 o ochranných opatřeních proti škodlivým organismům rostlin (dále jen „nařízení“). Dle čl. 65 tohoto nařízení je pro internetové prodejce rostlin, rostlinných produktů a jiných předmětů, podléhajících fytosanitární regulaci (dále jen regulované komodity), stanovena povinnost registrace pro rostlinolékařské účely, a to bez výjimky. Dále je dle čl. 79 a čl. 81 nařízení stanovena povinnost opatřovat regulované komodity při internetovém obchodování (smlouvy uzavřené na dálku) rostlinolékařským pasem, a to i v případě dodávek těchto komodit přímo konečným uživatelům. 
+        <br>
+        <br>
+        Veškeré informace ohledně zákazu dovozu určitých rostlin, zvláštních a rovnocenných požadavcích, které musí při dovozu na území EU nebo při přemísťování na tomto území, vysoce rizikových rostlinách, rostlinných produktech či jiných předmětech, výjimkách z požadavku na rostlinolékařské osvědčení pro malá množství určitých rostlin naleznete na stránkách ÚKZÚZ http://eagri.cz/public/web/ukzuz/portal/ <br>
+        <br>
+        <br>
+        Rostlinolékařský pas naleznete v příloze. <br>
+
+        </body>
+        </html>
+        ''' 
+        self.attachments_folder = os.path.join(os.getcwd(), 'pdf')
     def create_widgets(self):
         # Main frame
         main_frame = ttk.Frame(self, padding=20)
@@ -129,7 +167,7 @@ class PlantCodeFinder(tk.Frame):
 
         # Quit button
         self.quit_button = ttk.Button(main_frame, text="Ukončit", command=self.quit)
-        self.quit_button.grid(row=9, column=2, padx=10, pady=10, sticky="e")
+        self.quit_button.grid(row=10, column=2, padx=10, pady=10, sticky="e")
 
         self.compress_button = ttk.Button(main_frame, text="Optimalizovat Excely", command=self.compress_excel_files)
         self.compress_button.grid(row=9, column=0, pady=10, padx=10, sticky="w")
@@ -165,6 +203,9 @@ class PlantCodeFinder(tk.Frame):
 
         self.send_second_email_button = ttk.Button(new_buttons_frame, text="Bída pro Martínka", command=self.send_second_email)
         self.send_second_email_button.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
+
+        self.send_emails_button = ttk.Button(main_frame, text="Odeslat e-maily blbečkům", command=self.manage_recipients)
+        self.send_emails_button.grid(row=10, column=0, pady=10, padx=10, sticky="w")
         
 
         # Initialize instance variables
@@ -947,7 +988,129 @@ class PlantCodeFinder(tk.Frame):
         # Display a message in the console when all files have been compressed
         self.output_console.insert(tk.END, "Všechny excely byly optimalizovány.\n")
         self.output_console.see(tk.END)  # Auto-scroll to the end
-        self.output_console.update()  # Ensure the output console is updated     
+        self.output_console.update()  # Ensure the output console is updated  
+
+    def manage_recipients(self):
+        # Create a new dialog
+        dialog = tk.Toplevel(self)  # Use 'self' to refer to the main window
+        dialog.title("Spravovat adresáty a přílohy")
+        dialog.geometry("800x600")  # Set the size of the dialog
+
+        # Create a frame to contain the listbox and scrollbar
+        frame = tk.Frame(dialog)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Create a scrollbar
+        scrollbar = tk.Scrollbar(frame)
+        scrollbar.pack(side="right", fill="y")
+
+        # Create a listbox to display the recipients and attachments
+        listbox = tk.Listbox(frame, yscrollcommand=scrollbar.set)
+        listbox.pack(side="left", fill="both", expand=True)
+
+        # Configure the scrollbar to scroll the listbox
+        scrollbar.config(command=listbox.yview)
+
+        # Get the directory of the current script
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+
+        # Join the directory with the filename to get the full path of the file
+        file_path = os.path.join(script_dir, 'mail_tool', 'recipients.xlsx')
+
+        # Load the xlsx file
+        email_list = pd.read_excel(file_path)
+
+        # Create a label and entry for the BCC recipient
+        bcc_label = tk.Label(dialog, text="Skrytou kopii poslat na:")
+        bcc_label.pack(padx=10, pady=10)
+        bcc_entry = tk.Entry(dialog, width=50)  # Increase the width value as needed
+        bcc_entry.pack(padx=10, pady=10)
+        bcc_entry.insert(0, "tropiktropik.cz@gmail.com")  # Set the default BCC recipient
+
+        # Populate the listbox with the recipients and attachments
+        for _, row in email_list.iterrows():
+            recipient = row['Email']
+            attachment_name = row['Attachment']
+            listbox.insert(tk.END, f"{recipient} - {attachment_name}")
+
+
+        # Create a function to send email to the selected recipient
+        def send_email_to_selected_recipient():
+            selected_index = listbox.curselection()[0]  # Get the index of the selected item
+            selected_recipient = email_list.iloc[selected_index]
+
+            recipient = selected_recipient['Email']
+            attachment_name = selected_recipient['Attachment']
+            bcc_recipient = bcc_entry.get()
+            self.send_email_with_attachment(recipient, bcc_recipient, attachment_name)
+
+        # Create a button to send email to the selected recipient
+        send_button = tk.Button(dialog, text="Odeslat e-maily", command=send_email_to_selected_recipient)
+        send_button.pack(padx=10, pady=10)
+
+        # Create a function to send emails to all recipients
+        def send_emails_to_all_recipients():
+            # Get the BCC recipient from the entry field
+            bcc_recipient = bcc_entry.get()
+
+            for _, row in email_list.iterrows():
+                recipient = row['Email']
+                attachment_name = row['Attachment']
+                self.send_email_with_attachment(recipient, bcc_recipient, attachment_name)
+                dialog.update_idletasks()  # Force the GUI to update
+
+
+        # Create a button to send emails to all recipients
+        send_all_button = tk.Button(dialog, text="Odeslat e-maily všem", command=send_emails_to_all_recipients)
+        send_all_button.pack(padx=10, pady=10)
+
+    
+    def send_email_with_attachment(self, recipient, bcc_recipient, attachment_name):
+        self.output_console.insert(tk.END, f"Připravuji e-mail pro: {recipient} s přílohou: {attachment_name}\n")
+        self.output_console.update_idletasks()  # Force the GUI to update  # Force the GUI to update    
+        outlook = win32.Dispatch('outlook.application')
+        mail = outlook.CreateItem(0)
+        attachment_name_without_ext, _ = os.path.splitext(attachment_name)  # Remove the .pdf suffix
+        mail.Subject = f'Rostlinolékařský pas k vaší faktuře č. {attachment_name_without_ext}'  # Format the subject with the attachment name without the .pdf suffix
+        mail.HTMLBody = self.body
+        mail.To = recipient
+        mail.BCC = bcc_recipient
+
+        if not pd.isna(attachment_name):
+            attachment_path = os.path.join(self.attachments_folder, attachment_name)
+            if os.path.isfile(attachment_path):
+                mail.Attachments.Add(attachment_path)
+            else:
+                self.output_console.insert(tk.END, f"Příloha nenalezena: {attachment_path}. Neodeslal jsem e-mail pro {recipient}.\n")
+                return
+
+        mail.Send()
+        self.output_console.insert(tk.END, f"Email sent to: {recipient}\n")
+        time.sleep(5)  # Wait for 5 seconds
+
+
+
+    def send_emails(self):
+        # Get the directory of the current script
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+
+        # Join the directory with the filename to get the full path of the file
+        file_path = os.path.join(script_dir, 'mail_tool', 'recipients.xlsx')
+
+        wb = load_workbook(file_path)
+        ws = wb.active
+
+        # Read the email list from the xlsx file
+        email_list = pd.read_excel(file_path, sheet_name=ws.title)
+
+        for _, row in email_list.iterrows():
+            recipient = row['Email']
+            bcc_recipient = 'martinpenkava1@gmail.com'
+            attachment_name = row['Attachment']
+            print(f"Připravuji mail pro {recipient}...")  # Print the recipient of the current email
+            self.send_email_with_attachment(recipient, bcc_recipient, attachment_name)
+
+        print('Emaily uspěšně odeslány.')       
             
     def quit(self):
         self.master.destroy()
