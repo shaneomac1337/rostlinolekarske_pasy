@@ -17,6 +17,10 @@ from openpyxl import load_workbook
 import time
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.styles import Font, Border, Side, Alignment
+from PyPDF2 import PdfReader
+import re
+from copy import copy
+from tkinter import simpledialog
 
 current_version = "v1.0.2"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
@@ -130,6 +134,12 @@ class PlantCodeFinder(tk.Frame):
         self.manual_code_button = ttk.Button(buttons_frame, text="Přidat kód", command=self.manually_add_code)
         self.manual_code_button.grid(row=0, column=1, pady=10, padx=10, sticky="nsew")
 
+        self.create_excel_button = ttk.Button(buttons_frame, text="Připravit Excely", command=self.create_excel)
+        self.create_excel_button.grid(row=3, column=0, pady=10, padx=10, sticky="nsew")
+
+        self.process_pdf_button = ttk.Button(buttons_frame, text="Zpracovat Faktury", command=self.process_pdfs)
+        self.process_pdf_button.grid(row=3, column=1, pady=10, padx=10, sticky="nsew")
+
         self.manage_added_codes_button = ttk.Button(buttons_frame, text="Spravovat kódy v paměti", command=self.manage_added_codes)
         self.manage_added_codes_button.grid(row=1, column=1, pady=10, padx=10, sticky="nsew")
 
@@ -206,7 +216,6 @@ class PlantCodeFinder(tk.Frame):
 
         self.send_emails_button = ttk.Button(main_frame, text="Odeslat e-maily blbečkům", command=self.manage_recipients)
         self.send_emails_button.grid(row=10, column=0, pady=10, padx=10, sticky="w")
-        
 
         # Initialize instance variables
         self.template_wb = openpyxl.load_workbook(self.get_template())
@@ -1122,7 +1131,193 @@ class PlantCodeFinder(tk.Frame):
             print(f"Připravuji mail pro {recipient}...")  # Print the recipient of the current email
             self.send_email_with_attachment(recipient, bcc_recipient, attachment_name)
 
-        print('Emaily uspěšně odeslány.')       
+        print('Emaily uspěšně odeslány.')
+
+    def process_pdfs(self):
+        # Get all PDF files in the 'faktury' directory
+        pdf_files = [f for f in os.listdir('faktury') if f.endswith('.pdf')]
+
+        # Check if there are any PDF files
+        if not pdf_files:
+            messagebox.showwarning("Olinko???", "Vrzni mi sem prosím nějakou tu fakturu, nebo rovnou dvě.")
+            return  # Exit the method
+        def convert_pdf_to_txt(file_path):
+            pdf_reader = PdfReader(file_path)
+            texts = []
+            for page in pdf_reader.pages:
+                texts.append(page.extract_text())
+            return texts
+
+        def write_to_txt_and_extract_invoice_number_and_email(file_path, text, page_number):
+            invoice_number = None
+            email = None
+            for line in text.split('\n'):
+                if "Faktura č.:" in line:
+                    match = re.search(r'Faktura č.:\s*(\d+)', line)
+                    if match:
+                        invoice_number = match.group(1)
+                if "E-mail:" in line:
+                    match = re.search(r'(?i)E-mail:\s*([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)', line)
+                    if match:
+                        email = match.group(1)
+
+            if invoice_number:
+                # Create 'txt' directory inside 'faktury' if it doesn't exist
+                if not os.path.exists('faktury/txt'):
+                    os.makedirs('faktury/txt')
+
+                # Save .txt file in 'faktury/txt' directory
+                with open(f"faktury/txt/{invoice_number}.txt", 'w', encoding='utf-8') as txt_file_obj:
+                    txt_file_obj.write(text)
+
+            return invoice_number, email
+
+        def write_to_txt(file_path, data):
+            with open(file_path, 'w', encoding='utf-8') as txt_file_obj:
+                for item in data:
+                    txt_file_obj.write(f"{item}\n")
+
+        def write_to_excel(file_path, emails, invoice_numbers):
+            invoice_numbers = [str(invoice) + '.pdf' for invoice in invoice_numbers]
+            df = pd.DataFrame({
+                'Email': emails,
+                'Attachment': invoice_numbers
+            })
+
+            # Create 'mail_tool' directory if it doesn't exist
+            if not os.path.exists('mail_tool'):
+                os.makedirs('mail_tool')
+
+            df.to_excel(file_path, index=False)
+            book = load_workbook(file_path)
+            sheet = book.active
+            sheet.column_dimensions['A'].width = 30
+            sheet.column_dimensions['B'].width = 11
+            book.save(file_path)
+
+        # Get all PDF files in the 'faktury' directory
+        pdf_files = [f for f in os.listdir('faktury') if f.endswith('.pdf')]
+
+        invoice_numbers = []
+        emails = []
+
+        # Process each PDF file
+        for pdf_file in pdf_files:
+            self.output_console.insert(tk.END, f"Zpracovávám {pdf_file}...\n")
+            self.output_console.see(tk.END)  # Auto-scroll to the end
+            self.output_console.update()  # Ensure the output console is updated
+
+            pdf_path = os.path.join('faktury', pdf_file)
+            texts = convert_pdf_to_txt(pdf_path)
+            for i, text in enumerate(texts):
+                invoice_number, email = write_to_txt_and_extract_invoice_number_and_email(pdf_path, text, i+1)
+                if invoice_number:
+                    invoice_numbers.append(invoice_number)
+                if email:
+                    emails.append(email)
+
+        invoice_txt_path = 'invoice_numbers.txt'
+        email_txt_path = 'emails.txt'
+        
+        write_to_txt(invoice_txt_path, invoice_numbers)
+        write_to_txt(email_txt_path, emails)
+
+        excel_path = 'mail_tool/recipients.xlsx'  # Save Excel file in 'mail_tool' directory
+        self.output_console.insert(tk.END, "Zapisuji získaná data do recipients.xlsx pro Olinku..\n")
+        self.output_console.see(tk.END)  # Auto-scroll to the end
+        self.output_console.update()  # Ensure the output console is update
+        write_to_excel(excel_path, emails, invoice_numbers)
+
+        self.output_console.insert(tk.END, "Zpracování dokončeno.\n")
+        self.output_console.see(tk.END)  # Auto-scroll to the end
+        self.output_console.update()  # Ensure the output console is updated
+
+
+    def create_excel(self):
+        # Path to the directory containing the script and the mail_tool folder
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+
+        # Define the paths to the files
+        recipients_path = os.path.join(dir_path, 'mail_tool', 'recipients.xlsx')
+        build_path = os.path.join(dir_path, 'mail_tool', 'build.xlsx')
+
+        # Check if the files exist
+        if not os.path.exists(recipients_path):
+            messagebox.showwarning("Olinka má průšvih!", "Soubor 'recipients.xlsx' někde Olinka zapomněla, vrzni ho do mail_tool :)")
+            return  # Exit the method
+
+        if not os.path.exists(build_path):
+            messagebox.showwarning("Olinka má průšvih!", "Soubor 'build.xml' byl Olinkou zapomenut někde v řiťce. Měla bys ho rychle strčit do mail_tool :)")
+            return  # Exit the method
+
+        # Read the Excel files
+        recipients_df = pd.read_excel(os.path.join(dir_path, 'mail_tool', 'recipients.xlsx'))
+        build_wb = openpyxl.load_workbook(os.path.join(dir_path, 'mail_tool', 'build.xlsx'))
+
+        # Get the unique values in the second column of the recipients file, excluding the '.pdf' part
+        unique_values = recipients_df.iloc[:, 1].dropna().unique()
+
+        # Check if there are any unique values
+        if len(unique_values) == 0:
+            self.output_console.insert(tk.END, "No unique values found in the second column of the recipients file.\n")
+            self.output_console.see(tk.END)  # Auto-scroll to the end
+            self.output_console.update()  # Ensure the output console is updated
+        else:
+            # Ask for the name of the new Excel file
+            new_file_name = simpledialog.askstring("Zadání", "Teď by měla Olinka tento excel pojmenovat (asi podle datumu nebo jak to dělá??):")
+
+            # Add the '.xlsx' suffix if it's not already there
+            if not new_file_name.endswith('.xlsx'):
+                new_file_name += '.xlsx'
+
+            # Create a new Excel workbook
+            new_wb = openpyxl.Workbook()
+            new_wb.remove(new_wb.active)  # remove the default sheet created
+
+            # Loop over the unique values
+            for value in unique_values:
+                sheet_name = str(value).replace('.pdf', '')
+                # Copy the data from the build file to a new sheet in the new Excel file
+                source = build_wb.active
+                target = new_wb.create_sheet(title=sheet_name)
+
+                for row in source:
+                    for cell in row:
+                        new_cell = target.cell(row=cell.row, column=cell.column, value=cell.value)
+                        if cell.has_style:
+                            new_cell.font = copy(cell.font)
+                            new_cell.border = copy(cell.border)
+                            new_cell.fill = copy(cell.fill)
+                            new_cell.number_format = copy(cell.number_format)
+                            new_cell.protection = copy(cell.protection)
+                            new_cell.alignment = copy(cell.alignment)
+
+                # Copy column widths
+                for column in source.columns:
+                    max_length = 0
+                    column = [cell for cell in column]
+                    for cell in column:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(cell.value)
+                        except:
+                            pass
+                    adjusted_width = (max_length + 2)
+                    target.column_dimensions[column[0].column_letter].width = adjusted_width
+
+                # Copy row heights
+                for row in source.rows:
+                    for cell in row:
+                        target.row_dimensions[cell.row].height = source.row_dimensions[cell.row].height
+
+            # Save the new Excel file
+            new_wb.save(os.path.join(dir_path, new_file_name))
+
+            self.output_console.insert(tk.END, f"Otrok vytvořil {new_file_name} protože to přece nebude dělat Olinka sama ne??.\n")
+            self.output_console.see(tk.END)  # Auto-scroll to the end
+            self.output_console.update()  # Ensure the output console is updated
+        
+           
             
     def quit(self):
         self.master.destroy()
