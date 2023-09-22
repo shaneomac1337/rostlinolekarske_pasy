@@ -22,7 +22,7 @@ import re
 from copy import copy
 from tkinter import simpledialog
 
-current_version = "v1.0.2"
+current_version = "v1.0.3"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
