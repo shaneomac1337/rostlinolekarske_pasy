@@ -21,8 +21,10 @@ from PyPDF2 import PdfReader
 import re
 from copy import copy
 from tkinter import simpledialog
+from openpyxl.utils import get_column_letter
+import shutil
 
-current_version = "v1.0.3"
+current_version = "v1.0.4"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -208,8 +210,8 @@ class PlantCodeFinder(tk.Frame):
         self.show_unmatched_button = ttk.Button(new_buttons_frame, text="Zobrazit neshody", command=self.show_unmatched_names)
         self.show_unmatched_button.grid(row=0, column=1, pady=10, padx=10, sticky="nsew")
 
-        self.missing_folder_button = ttk.Button(new_buttons_frame, text="Vytvořit složku missing", command=self.create_missing_folder)
-        self.missing_folder_button.grid(row=2, column=1, pady=10, padx=10, sticky="nsew")
+        self.process_plants_button = ttk.Button(new_buttons_frame, text="Získat rostliny", command=self.process_txts_for_plants)
+        self.process_plants_button.grid(row=2, column=1, pady=10, padx=10, sticky="nsew")
 
         self.send_second_email_button = ttk.Button(new_buttons_frame, text="Bída pro Martínka", command=self.send_second_email)
         self.send_second_email_button.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
@@ -1134,6 +1136,18 @@ class PlantCodeFinder(tk.Frame):
         print('Emaily uspěšně odeslány.')
 
     def process_pdfs(self):
+        # Check if 'faktury/txt' directory exists
+
+        if os.path.exists('faktury/txt'):
+            # If it does, print a message and delete the entire directory tree
+
+            self.output_console.insert(tk.END, "Nalezl jsem informace o předchozích zpracovaných fakturách, pro jistotu je mažu, aby se Olince nestal incident :)\n")
+            self.output_console.see(tk.END)  # Auto-scroll to the end
+            self.output_console.update()  # Ensure the output console is updated
+            shutil.rmtree('faktury/txt')
+
+        # Recreate the 'faktury/txt' directory
+        os.makedirs('faktury/txt')
         # Get all PDF files in the 'faktury' directory
         pdf_files = [f for f in os.listdir('faktury') if f.endswith('.pdf')]
 
@@ -1317,7 +1331,85 @@ class PlantCodeFinder(tk.Frame):
             self.output_console.see(tk.END)  # Auto-scroll to the end
             self.output_console.update()  # Ensure the output console is updated
         
-           
+
+    def process_txts_for_plants(self):
+        # Check if the 'faktury/txt' directory exists
+        if not os.path.exists('faktury/txt'):
+            messagebox.showwarning("Olinko???", "Nejdříve se musí pustit funkce Zpracovat Faktury, jinak ti tohle nepujde, tak to koukej pustit.")
+            return  # Exit the method
+
+        # Get all .txt files in the 'faktury/txt' directory
+        txt_files = [f for f in os.listdir('faktury/txt') if f.endswith('.txt')]
+
+        # Check if there are any .txt files
+        if not txt_files:
+            messagebox.showwarning("Vyhráváš zlatého Bluďišťáka", "Tohle je poměrně dobrý easter egg, protože tahle situace aby byla složka a chyběly soubory téměř nemuže nastat, tak gratuluji, že si tohle objevila, ale moc se v tom nevrtej jako!!!")
+            return  # Exit the method
+        
+        affected_excel_files = []
+        unmatched_excel_files = []
+
+        def extract_plant_names_and_write_to_excel(file_path, invoice_number):
+            plant_names = []
+            with open(file_path, 'r', encoding='utf-8') as txt_file_obj:
+                for line in txt_file_obj:
+                    match = re.search(r'\(\)\s(.+)', line)
+                    if match:
+                        plant_names.append(match.group(1))
+
+            # Create a new directory if it doesn't exist
+            new_dir = 'faktury/txt/kytky'
+            if not os.path.exists(new_dir):
+                os.makedirs(new_dir)
+
+            # Create a new file in the new directory with plant names
+            with open(f'{new_dir}/kytky_{invoice_number}.txt', 'w', encoding='utf-8') as f:
+                for plant_name in plant_names:
+                    f.write(f'{plant_name}\n')
+
+            excel_files = [f for f in os.listdir() if f.endswith('.xlsx') and f not in ['temporary.xlsx', 'template.xlsx']]
+
+            for excel_file in excel_files:
+                workbook = load_workbook(excel_file)
+                if invoice_number in workbook.sheetnames:
+                    worksheet = workbook[invoice_number]
+                    start_row = 13  # Start from row 13
+                    col = get_column_letter(3)  # Column D
+                    max_length = 0
+                    column = col
+                    for i, plant_name in enumerate(plant_names, start=start_row):
+                        worksheet[f"{col}{i}"] = plant_name
+                        if len(plant_name) > max_length:
+                            max_length = len(plant_name)
+                    worksheet.column_dimensions[column].width = max_length
+                    workbook.save(excel_file)
+                    if excel_file not in affected_excel_files:
+                        affected_excel_files.append(excel_file)
+                else:
+                    if excel_file not in unmatched_excel_files:
+                        unmatched_excel_files.append(excel_file)
+
+        # Process each .txt file
+        for txt_file in txt_files:
+            # Skip 'kytky_plant_names.txt' and 'plant_names.txt'
+            if txt_file in ['kytky_plant_names.txt', 'plant_names.txt']:
+                continue
+
+            self.output_console.insert(tk.END, f"Zpracovávám {txt_file}...\n")
+            self.output_console.see(tk.END)  # Auto-scroll to the end
+            self.output_console.update()  # Ensure the output console is updated
+
+            invoice_number = os.path.splitext(txt_file)[0].replace('kytky_', '')  # Get the invoice number from the file name
+            txt_path = os.path.join('faktury/txt', txt_file)
+            extract_plant_names_and_write_to_excel(txt_path, invoice_number)
+
+        self.output_console.insert(tk.END, "Zpracování dokončeno.\n")
+        self.output_console.insert(tk.END, f"Excely které jsem naplnil rostlinami: {', '.join(affected_excel_files)}\n")
+        self.output_console.insert(tk.END, f"Excely obsahující jiné faktury a tudíž nebyly naplněny rostlinami: {', '.join(unmatched_excel_files)}\n")
+        self.output_console.see(tk.END)  # Auto-scroll to the end
+        self.output_console.update()  # Ensure the output console is updated
+
+       
             
     def quit(self):
         self.master.destroy()
