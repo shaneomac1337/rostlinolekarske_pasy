@@ -23,8 +23,10 @@ from copy import copy
 from tkinter import simpledialog
 from openpyxl.utils import get_column_letter
 import shutil
+from tkinter import ttk, Toplevel, Text, Button, END, messagebox
+from openpyxl import load_workbook
 
-current_version = "v1.0.4"
+current_version = "v1.0.5"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -204,7 +206,7 @@ class PlantCodeFinder(tk.Frame):
         self.send_email_button = ttk.Button(new_buttons_frame, text="Pochvala pro Martínka", command=self.send_email)
         self.send_email_button.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
 
-        self.check_updates_button = ttk.Button(new_buttons_frame, text="Zkontrolovat aktualizace", command=self.check_for_updates)
+        self.check_updates_button = ttk.Button(new_buttons_frame, text="Ořezat názvy", command=self.open_trim_names_window)
         self.check_updates_button.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
 
         self.show_unmatched_button = ttk.Button(new_buttons_frame, text="Zobrazit neshody", command=self.show_unmatched_names)
@@ -218,6 +220,9 @@ class PlantCodeFinder(tk.Frame):
 
         self.send_emails_button = ttk.Button(main_frame, text="Odeslat e-maily blbečkům", command=self.manage_recipients)
         self.send_emails_button.grid(row=10, column=0, pady=10, padx=10, sticky="w")
+
+        self.trim_names_button = ttk.Button(main_frame, text="Zkontrolovat aktualizace", command=self.check_for_updates)
+        self.trim_names_button.grid(row=9, column=2, pady=10, padx=10, sticky="w")
 
         # Initialize instance variables
         self.template_wb = openpyxl.load_workbook(self.get_template())
@@ -1408,6 +1413,159 @@ class PlantCodeFinder(tk.Frame):
         self.output_console.insert(tk.END, f"Excely obsahující jiné faktury a tudíž nebyly naplněny rostlinami: {', '.join(unmatched_excel_files)}\n")
         self.output_console.see(tk.END)  # Auto-scroll to the end
         self.output_console.update()  # Ensure the output console is updated
+
+
+    def open_trim_names_window(self):
+        new_window = Toplevel(self.master)
+        new_window.title("Ořezat názvy")
+        new_window.geometry("1230x968")  # Set the size of the window
+
+        listbox_widget = tk.Listbox(new_window, height=35, width=200)
+        listbox_widget.grid(row=0, column=0, columnspan=3, padx=10, pady=10)
+
+        # Add instructions label
+        instructions = "Použití:\n" \
+                    "1. Nejdřív načti Excel - kliknutím na vybrat Excel.\n" \
+                    "2. Potom můžeš zobrazit, jaký změny tool dokáže udělat kliknutím na 'Zobrazit, co se změní'\n" \
+                    "3. Kliknutím na Zpracovat Excely provedeš změny, které byly vidět v předchozím kroku \n" \
+                    "4. Funkce zobrazit, co ještě zbývá změnit zobrazuje hodnoty, které nebyly změněny toolem - doporučeno spustit až po prvním zpracování excelu.\n" \
+        
+        instructions_label = tk.Label(new_window, text=instructions)
+        instructions_label.grid(row=1, column=0, columnspan=3, padx=10, pady=10)
+
+        entry_widget = tk.Entry(new_window, width=75)
+        entry_widget.grid(row=2, column=0, columnspan=3, padx=10, pady=10)
+
+        show_changes_button = Button(new_window, text="Zobrazit, co se změní", command=lambda: self.on_show_changes_click(listbox_widget))
+        show_changes_button.grid(row=2, column=0, padx=10, pady=10)
+
+        show_unmatched_button = Button(new_window, text="Zobrazit, co ještě zbývá změnit", command=lambda: self.on_show_unmatched_click(listbox_widget))
+        show_unmatched_button.grid(row=3, column=0, padx=10, pady=10)
+
+        process_button = Button(new_window, text="Zpracovat Excel", command=lambda: self.on_process_click(listbox_widget))
+        process_button.grid(row=4, column=0, padx=10, pady=10)
+
+        load_button = Button(new_window, text="Zobrazit slovník", command=lambda: self.on_load_click(listbox_widget))
+        load_button.grid(row=2, column=2, padx=10, pady=10)
+
+        add_button = Button(new_window, text="Přidat do slovníku", command=lambda: self.on_add_click(entry_widget))
+        add_button.grid(row=3, column=2, padx=10, pady=10)
+
+        select_file_button = Button(new_window, text="Vybrat Excel", command=self.select_file)
+        select_file_button.grid(row=6, column=1, padx=10, pady=10)
+
+        # Automatically process the Excel file and display the unmatched values
+        #self.on_process_click(listbox_widget)
+
+
+    def load_dictionary(self):
+        with open('dictionary.txt', 'r', encoding='utf-8') as f:
+            return f.read().splitlines()
+    
+    def select_file(self):
+        self.excel_file = filedialog.askopenfilename(parent=self.master, filetypes=[("Excel files", "*.xlsx")])
+ 
+    def process_excel(self, dictionary_values, show_changes=False):
+        if not hasattr(self, 'excel_file'):
+            messagebox.showerror("Error", "No file selected")
+            return
+
+        book = load_workbook(self.excel_file)
+        values = []
+
+        for sheet_name in book.sheetnames:
+            sheet = book[sheet_name]
+            for row in range(13, sheet.max_row + 1):
+                cell = sheet.cell(row=row, column=3)
+                if cell.value and cell.value not in dictionary_values:  # check if the cell value is not in the dictionary
+                    original_value = cell.value  # store the original value
+                    for value in dictionary_values:
+                        if value in original_value:
+                            new_value = value  # store the new value
+                            if not show_changes:  # only print to console if show_changes is False
+                                self.output_console.insert(tk.END, f'Old: {original_value} >> Nový: {new_value}\n')
+                                self.output_console.see(tk.END)
+                            if show_changes:
+                                values.append((original_value, new_value))  # use the stored original value and the new value
+                            else:
+                                cell.value = new_value  # replace the cell value with the new value
+                            break
+                    if not show_changes and cell.value == original_value:
+                        values.append((original_value, 'Unmatched'))
+
+        if not show_changes:
+            book.save(self.excel_file)  # only save the changes to the Excel file when show_changes is False
+
+        return values
+
+
+
+
+
+    def add_to_dictionary(self, value):
+        with open('dictionary.txt', 'a', encoding='utf-8') as f:
+            f.write(f'\n{value}')
+
+    def on_process_click(self, listbox_widget):
+        dictionary_values = self.load_dictionary()
+        unmatched_values = self.process_excel(dictionary_values)
+        listbox_widget.delete(0, tk.END)
+        for original_value, new_value in unmatched_values:
+            if new_value == 'Unmatched':
+                listbox_widget.insert(tk.END, original_value)
+
+
+    def on_load_click(self, listbox_widget):
+        dictionary_values = self.load_dictionary()
+        listbox_widget.delete(0, tk.END)
+        for value in dictionary_values:
+            listbox_widget.insert(tk.END, value)
+
+
+    def on_show_changes_click(self, listbox_widget):
+        dictionary_values = self.load_dictionary()
+        values = self.process_excel(dictionary_values, show_changes=True)
+        listbox_widget.delete(0, tk.END)
+        if not values:  # if no changes were made
+            listbox_widget.insert(tk.END, "Nenašel jsem přepisy | Nic přepsáno pro Olinku nebude!")
+        else:
+            for original_value, new_value in values:
+                listbox_widget.insert(tk.END, f'Original: {original_value} >> Nový: {new_value}')
+
+    def on_add_click(self, entry_widget):
+        value = entry_widget.get()
+        if value:
+            self.add_to_dictionary(value)
+            self.output_console.insert(tk.END, "Success: Value added to dictionary\n")
+
+
+    def show_unmatched(self, dictionary_values):
+        if not hasattr(self, 'excel_file'):
+            messagebox.showerror("Error", "No file selected")
+            return
+
+        book = load_workbook(self.excel_file, read_only=True)
+        unmatched_values = []
+
+        for sheet_name in book.sheetnames:
+            sheet = book[sheet_name]
+            for row in range(13, sheet.max_row + 1):
+                cell = sheet.cell(row=row, column=3)
+                if cell.value and cell.value not in dictionary_values:  # check if the cell value is not in the dictionary
+                    unmatched_values.append(cell.value)
+
+        return unmatched_values
+
+    def on_show_unmatched_click(self, listbox_widget):
+        dictionary_values = self.load_dictionary()
+        unmatched_values = self.show_unmatched(dictionary_values)
+        listbox_widget.delete(0, tk.END)
+        if unmatched_values:
+            for value in unmatched_values:
+                listbox_widget.insert(tk.END, value)
+        else:
+            listbox_widget.insert(tk.END, "Všechno bylo zpracováno, tento Excel už obsahuje pouze latinské názvy :)")
+        
 
        
             
