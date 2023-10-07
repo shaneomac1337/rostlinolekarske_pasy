@@ -26,7 +26,7 @@ import shutil
 from tkinter import ttk, Toplevel, Text, Button, END, messagebox
 from openpyxl import load_workbook
 
-current_version = "v1.0.5"
+current_version = "v1.0.6"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -1436,11 +1436,15 @@ class PlantCodeFinder(tk.Frame):
         entry_widget = tk.Entry(new_window, width=75)
         entry_widget.grid(row=2, column=0, columnspan=3, padx=10, pady=10)
 
+        listbox_widget = tk.Listbox(new_window, height=35, width=200)
+        listbox_widget.grid(row=0, column=0, columnspan=3, padx=10, pady=10)
+        listbox_widget.bind('<<ListboxSelect>>', lambda event: self.on_listbox_select(event, entry_widget))
+
         show_changes_button = Button(new_window, text="Zobrazit, co se změní", command=lambda: self.on_show_changes_click(listbox_widget))
         show_changes_button.grid(row=2, column=0, padx=10, pady=10)
 
-        show_unmatched_button = Button(new_window, text="Zobrazit, co ještě zbývá změnit", command=lambda: self.on_show_unmatched_click(listbox_widget))
-        show_unmatched_button.grid(row=3, column=0, padx=10, pady=10)
+        self.show_unmatched_button = Button(new_window, text="Zobrazit, co ještě zbývá změnit", command=lambda: self.on_show_unmatched_click(listbox_widget), state='disabled')
+        self.show_unmatched_button.grid(row=3, column=0, padx=10, pady=10)
 
         process_button = Button(new_window, text="Zpracovat Excel", command=lambda: self.on_process_click(listbox_widget))
         process_button.grid(row=4, column=0, padx=10, pady=10)
@@ -1467,7 +1471,7 @@ class PlantCodeFinder(tk.Frame):
  
     def process_excel(self, dictionary_values, show_changes=False):
         if not hasattr(self, 'excel_file'):
-            messagebox.showerror("Error", "No file selected")
+            messagebox.showerror("Chyba! Ajéje", "Olinka musí vybrat nejdřív excel přes tlačítko Vybrat Excel, to je logický ne??")
             return
 
         book = load_workbook(self.excel_file)
@@ -1483,7 +1487,7 @@ class PlantCodeFinder(tk.Frame):
                         if value in original_value:
                             new_value = value  # store the new value
                             if not show_changes:  # only print to console if show_changes is False
-                                self.output_console.insert(tk.END, f'Old: {original_value} >> Nový: {new_value}\n')
+                                self.output_console.insert(tk.END, f'Přepsáno z: {original_value} >> Nový: {new_value}\n')
                                 self.output_console.see(tk.END)
                             if show_changes:
                                 values.append((original_value, new_value))  # use the stored original value and the new value
@@ -1514,6 +1518,9 @@ class PlantCodeFinder(tk.Frame):
             if new_value == 'Unmatched':
                 listbox_widget.insert(tk.END, original_value)
 
+        self.show_unmatched_button.config(state='normal')  # enable the button
+
+
 
     def on_load_click(self, listbox_widget):
         dictionary_values = self.load_dictionary()
@@ -1530,14 +1537,13 @@ class PlantCodeFinder(tk.Frame):
             listbox_widget.insert(tk.END, "Nenašel jsem přepisy | Nic přepsáno pro Olinku nebude!")
         else:
             for original_value, new_value in values:
-                listbox_widget.insert(tk.END, f'Original: {original_value} >> Nový: {new_value}')
+                listbox_widget.insert(tk.END, f'Originál: {original_value} >> Nový: {new_value}')
 
     def on_add_click(self, entry_widget):
         value = entry_widget.get()
         if value:
             self.add_to_dictionary(value)
-            self.output_console.insert(tk.END, "Success: Value added to dictionary\n")
-
+            self.output_console.insert(tk.END, f"Povedlo se!: Název '{value}' byl přidán do slovníku\n")
 
     def show_unmatched(self, dictionary_values):
         if not hasattr(self, 'excel_file'):
@@ -1564,10 +1570,28 @@ class PlantCodeFinder(tk.Frame):
             for value in unmatched_values:
                 listbox_widget.insert(tk.END, value)
         else:
-            listbox_widget.insert(tk.END, "Všechno bylo zpracováno, tento Excel už obsahuje pouze latinské názvy :)")
-        
+            listbox_widget.insert(tk.END, "Všechno už bylo zpracováno, tento Excel už obsahuje pouze latinské názvy :)")
 
-       
+
+    def on_listbox_select(self, event, entry_widget):
+        # Get selected line index
+        index = event.widget.curselection()
+        # Check if the index is not empty
+        if index:
+            # Get the line's text
+            selected_text = event.widget.get(index)
+            # Clear the entry widget
+            entry_widget.delete(0, tk.END)
+            # Insert the selected text into the entry widget
+            entry_widget.insert(0, selected_text)
+
+
+    def update_listbox_with_dictionary(self, listbox_widget):
+        dictionary_values = self.load_dictionary()
+        listbox_widget.delete(0, tk.END)
+        for value in dictionary_values:
+            listbox_widget.insert(tk.END, value)        
+            
             
     def quit(self):
         self.master.destroy()
