@@ -26,7 +26,7 @@ import shutil
 from tkinter import ttk, Toplevel, Text, Button, END, messagebox
 from openpyxl import load_workbook
 
-current_version = "v1.0.6"
+current_version = "v1.0.7"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -1429,6 +1429,7 @@ class PlantCodeFinder(tk.Frame):
                     "2. Potom můžeš zobrazit, jaký změny tool dokáže udělat kliknutím na 'Zobrazit, co se změní'\n" \
                     "3. Kliknutím na Zpracovat Excely provedeš změny, které byly vidět v předchozím kroku \n" \
                     "4. Funkce zobrazit, co ještě zbývá změnit zobrazuje hodnoty, které nebyly změněny toolem - doporučeno spustit až po prvním zpracování excelu.\n" \
+                    "5. Pokud načteš slovník a něco se ti v něm nelíbí je možné hodnotu smazat přímo přes tool zvolením krátkého názvu a stiskuntím klávesy ''Delete''\n" \
         
         instructions_label = tk.Label(new_window, text=instructions)
         instructions_label.grid(row=1, column=0, columnspan=3, padx=10, pady=10)
@@ -1439,6 +1440,7 @@ class PlantCodeFinder(tk.Frame):
         listbox_widget = tk.Listbox(new_window, height=35, width=200)
         listbox_widget.grid(row=0, column=0, columnspan=3, padx=10, pady=10)
         listbox_widget.bind('<<ListboxSelect>>', lambda event: self.on_listbox_select(event, entry_widget))
+        listbox_widget.bind('<Delete>', lambda event: self.on_delete_click(listbox_widget))
 
         show_changes_button = Button(new_window, text="Zobrazit, co se změní", command=lambda: self.on_show_changes_click(listbox_widget))
         show_changes_button.grid(row=2, column=0, padx=10, pady=10)
@@ -1507,8 +1509,18 @@ class PlantCodeFinder(tk.Frame):
 
 
     def add_to_dictionary(self, value):
-        with open('dictionary.txt', 'a', encoding='utf-8') as f:
-            f.write(f'\n{value}')
+        with open('dictionary.txt', 'a+', encoding='utf-8') as f:
+            # Move the pointer to the start of the file
+            f.seek(0)
+            # Check if the file is not empty
+            if f.read(1):
+                # If the file is not empty, prepend the value with a newline character
+                f.write(f'\n{value}')
+            else:
+                # If the file is empty, just write the value
+                f.write(value)
+
+
 
     def on_process_click(self, listbox_widget):
         dictionary_values = self.load_dictionary()
@@ -1590,8 +1602,30 @@ class PlantCodeFinder(tk.Frame):
         dictionary_values = self.load_dictionary()
         listbox_widget.delete(0, tk.END)
         for value in dictionary_values:
-            listbox_widget.insert(tk.END, value)        
-            
+            listbox_widget.insert(tk.END, value)
+
+    def on_delete_click(self, listbox_widget):
+        # Get selected line index
+        index = listbox_widget.curselection()
+        # Check if the index is not empty
+        if index:
+            # Get the line's text
+            selected_text = listbox_widget.get(index)
+            # Delete the selected line from the listbox
+            listbox_widget.delete(index)
+            # Delete the selected line from the dictionary.txt file
+            self.delete_from_dictionary(selected_text)
+
+    def delete_from_dictionary(self, value):
+        # Load all dictionary values
+        dictionary_values = self.load_dictionary()
+        # Remove the selected value
+        dictionary_values.remove(value)
+        # Write the updated dictionary values back to the file
+        with open('dictionary.txt', 'w', encoding='utf-8') as f:
+            f.write('\n'.join(dictionary_values))
+
+                
             
     def quit(self):
         self.master.destroy()
