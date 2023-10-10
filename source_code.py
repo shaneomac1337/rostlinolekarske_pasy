@@ -26,7 +26,7 @@ import shutil
 from tkinter import ttk, Toplevel, Text, Button, END, messagebox
 from openpyxl import load_workbook
 
-current_version = "v1.0.7"
+current_version = "v1.0.8"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
@@ -1472,6 +1472,7 @@ class PlantCodeFinder(tk.Frame):
         self.excel_file = filedialog.askopenfilename(parent=self.master, filetypes=[("Excel files", "*.xlsx")])
  
     def process_excel(self, dictionary_values, show_changes=False):
+        dictionary_values.sort(key=len, reverse=True)
         if not hasattr(self, 'excel_file'):
             messagebox.showerror("Chyba! Ajéje", "Olinka musí vybrat nejdřív excel přes tlačítko Vybrat Excel, to je logický ne??")
             return
