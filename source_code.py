@@ -26,39 +26,47 @@ import shutil
 from tkinter import ttk, Toplevel, Text, Button, END, messagebox
 from openpyxl import load_workbook
 
-current_version = "v1.0.8"
+
+current_version = "v1.1.0"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
-response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
-if response.status_code == requests.codes.ok:
-    latest_release = response.json()
-    latest_version = latest_release['tag_name'][1:]
-    if semver.compare(current_version[1:], latest_version) < 0:
-        # Display a message box to the user
-        app = tk.Tk()
-        app.withdraw()
-        result = messagebox.askyesno('Aktualizace dostupná', 'Nová verze toolu na pasy je k dispozici, přeje si Olinka stáhnout novou verzi z webu?')
+try:
+    response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
-        if result:
-            # Otevřít GitHub k nalezení aktuální verze
-            url = latest_release['html_url']
-            webbrowser.open_new(url)
+    if response.status_code == requests.codes.ok:
+        latest_release = response.json()
+        latest_version = latest_release['tag_name'][1:]
+        if semver.compare(current_version[1:], latest_version) < 0:
+            # Display a message box to the user
+            app = tk.Tk()
+            app.withdraw()
+            result = messagebox.askyesno('Aktualizace dostupná', 'Nová verze toolu na pasy je k dispozici, přeje si Olinka stáhnout novou verzi z webu?')
 
-            # Update je k dispozici, detekce platformy
-            assets = latest_release['assets']
-            for asset in assets:
-                if 'Windows' in asset['name'] and 'x86_64' in asset['name']:
-                    download_url = asset['browser_download_url']
-                    r = requests.get(download_url)
+            if result:
+                # Otevřít GitHub k nalezení aktuální verze
+                url = latest_release['html_url']
+                webbrowser.open_new(url)
+
+                # Update je k dispozici, detekce platformy
+                assets = latest_release['assets']
+                for asset in assets:
+                    if 'Windows' in asset['name'] and 'x86_64' in asset['name']:
+                        download_url = asset['browser_download_url']
+                        r = requests.get(download_url)
+            else:
+                # Nedělat nic, pokud zvoleno "Ne"
+                pass
         else:
-            # Nedělat nic, pokud zvoleno "Ne"
+            # Update není k dispozici
             pass
     else:
-        # Update není k dispozici
+        # Neobdržel jsem info o updatu
         pass
-else:
-    # Neobdržel jsem info o updatu
-    pass
+except requests.exceptions.RequestException:
+    # Display an error message box
+    messagebox.showerror("Chyba", "Olince nejde internet, copa s tim vyvádí?? No každopádně tool se pustí i bez něj, je totiž profi!.")
+
+
 
 class PlantCodeFinder(tk.Frame):
     def __init__(self, master=None):
@@ -238,38 +246,43 @@ class PlantCodeFinder(tk.Frame):
 
     def check_for_updates(self):
         url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
-        response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
+        try:
+            response = requests.get(url.format(owner='shaneomac1337', repo='rostlinolekarske_pasy'))
 
-        if response.status_code == requests.codes.ok:
-            latest_release = response.json()
-            latest_version = latest_release['tag_name'][1:]
-            if semver.compare(current_version[1:], latest_version) < 0:
-                # Display a message box to the user
-                result = messagebox.askyesno('Aktualizace dostupná', 'Nová verze toolu na pasy je k dispozici, přeje si Olinka stáhnout novou verzi z webu?')
+            if response.status_code == requests.codes.ok:
+                latest_release = response.json()
+                latest_version = latest_release['tag_name'][1:]
+                if semver.compare(current_version[1:], latest_version) < 0:
+                    # Display a message box to the user
+                    result = messagebox.askyesno('Aktualizace dostupná', 'Nová verze toolu na pasy je k dispozici, přeje si Olinka stáhnout novou verzi z webu?')
 
-                if result:
-                    # Open the Github page for the latest release in the user's default web browser
-                    url = latest_release['html_url']
-                    webbrowser.open_new(url)
+                    if result:
+                        # Open the Github page for the latest release in the user's default web browser
+                        url = latest_release['html_url']
+                        webbrowser.open_new(url)
 
-                    # An update is available, download the asset(s) that match your platform and architecture
-                    assets = latest_release['assets']
-                    for asset in assets:
-                        if 'Windows' in asset['name'] and 'x86_64' in asset['name']:
-                            download_url = asset['browser_download_url']
-                            r = requests.get(download_url)
-                            # Save the downloaded asset to a file
-                            with open('aplikace_v.0.4.0.exe', 'wb') as f:
-                                f.write(r.content)
+                        # An update is available, download the asset(s) that match your platform and architecture
+                        assets = latest_release['assets']
+                        for asset in assets:
+                            if 'Windows' in asset['name'] and 'x86_64' in asset['name']:
+                                download_url = asset['browser_download_url']
+                                r = requests.get(download_url)
+                                # Save the downloaded asset to a file
+                                with open('aplikace_v.0.4.0.exe', 'wb') as f:
+                                    f.write(r.content)
+                    else:
+                        # Do nothing if the user clicks "No"
+                        pass
                 else:
-                    # Do nothing if the user clicks "No"
-                    pass
+                    # No update available
+                    messagebox.showinfo('Žádné aktualizace', 'Pro Olinku není k dispozici bohužel žádná aktualizace')
             else:
-                # No update available
-                messagebox.showinfo('Žádné aktualizace', 'Pro Olinku není k dispozici bohužel žádná aktualizace')
-        else:
-            # Failed to retrieve latest release info
-            messagebox.showerror('Chyba', 'Nedokázal jsem zjistit informace o nejnovější verzi z GitHubu.')        
+                # Failed to retrieve latest release info
+                messagebox.showerror('Chyba', 'Nedokázal jsem zjistit informace o nejnovější verzi z GitHubu.')
+        except requests.exceptions.RequestException:
+            # Display an error message box
+            messagebox.showerror("Chyba", "Olinka nemá internet a chtěla by novou verzi, smůla ty naivko!! Hezky pojedeš na starý.")
+
 
     def has_excel_files(self):
         for filename in os.listdir('.'):
@@ -1464,6 +1477,13 @@ class PlantCodeFinder(tk.Frame):
         select_file_button = Button(new_window, text="Vybrat Excel", command=self.select_file)
         select_file_button.grid(row=6, column=1, padx=10, pady=10)
 
+
+        load_from_template_button = Button(new_window, text="Načíst slovník ze šablony", command=lambda: self.load_from_template(listbox_widget))
+        load_from_template_button.grid(row=4, column=2, padx=10, pady=10)
+
+
+
+
         # Automatically process the Excel file and display the unmatched values
         #self.on_process_click(listbox_widget)
 
@@ -1629,6 +1649,22 @@ class PlantCodeFinder(tk.Frame):
         # Write the updated dictionary values back to the file
         with open('dictionary.txt', 'w', encoding='utf-8') as f:
             f.write('\n'.join(dictionary_values))
+
+
+    def load_from_template(self, listbox_widget):
+        # Load the workbook
+        book = load_workbook('template.xlsx')
+        # Select the first sheet
+        sheet = book.active
+        # Get the values from column A starting from row 2
+        values = [cell.value for cell in sheet['A'][1:] if cell.value is not None]
+        # Write the values to the dictionary.txt file
+        with open('dictionary.txt', 'w', encoding='utf-8') as f:
+            f.write('\n'.join(values))
+        # Update the listbox with the new dictionary values
+        self.update_listbox_with_dictionary(listbox_widget)
+
+        
 
                 
             
