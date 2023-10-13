@@ -129,29 +129,32 @@ class PlantCodeFinder(tk.Frame):
             buttons_frame.rowconfigure(i, weight=1, minsize=50)
 
         # Buttons grid
-        self.process_button = ttk.Button(buttons_frame, text="Zpracovat soubory", command=self.process_files)
+        self.process_button = ttk.Button(buttons_frame, text="Zpracovat faktury", command=self.process_pdfs)
         self.process_button.grid(row=0, column=0, pady=10, padx=10, sticky="nsew")
 
-        self.delete_codes_button = ttk.Button(buttons_frame, text="Smazat vše", command=self.delete_codes_and_cz)
-        self.delete_codes_button.grid(row=1, column=0, pady=10, padx=10, sticky="nsew")
-
-        self.manual_code_button = ttk.Button(buttons_frame, text="Přidat kód", command=self.manually_add_code)
+        self.manual_code_button = ttk.Button(buttons_frame, text="Připravit excely", command=self.create_excel)
         self.manual_code_button.grid(row=0, column=1, pady=10, padx=10, sticky="nsew")
 
-        self.create_excel_button = ttk.Button(buttons_frame, text="Připravit Excely", command=self.create_excel)
+        self.create_excel_button = ttk.Button(buttons_frame, text="Smazat vše", command=self.delete_codes_and_cz)
         self.create_excel_button.grid(row=3, column=0, pady=10, padx=10, sticky="nsew")
 
-        self.process_pdf_button = ttk.Button(buttons_frame, text="Zpracovat Faktury", command=self.process_pdfs)
+        self.process_pdf_button = ttk.Button(buttons_frame, text="Uložit Excely jako PDFka", command=self.save_all_excels_as_pdfs)
         self.process_pdf_button.grid(row=3, column=1, pady=10, padx=10, sticky="nsew")
 
-        self.manage_added_codes_button = ttk.Button(buttons_frame, text="Spravovat kódy v paměti", command=self.manage_added_codes)
-        self.manage_added_codes_button.grid(row=1, column=1, pady=10, padx=10, sticky="nsew")
+        self.check_updates_button = ttk.Button(buttons_frame, text="Ořezat názvy", command=self.open_trim_names_window)
+        self.check_updates_button.grid(row=1, column=1, pady=10, padx=10, sticky="nsew")
 
-        self.save_excels_as_pdfs_button = ttk.Button(buttons_frame, text="Uložit Excely jako PDFka", command=self.save_all_excels_as_pdfs)
+        self.save_excels_as_pdfs_button = ttk.Button(buttons_frame, text="Zpracovat soubory", command=self.process_files)
         self.save_excels_as_pdfs_button.grid(row=2, column=1, padx=10, pady=10, sticky="nsew")
 
-        self.insert_image_button = ttk.Button(buttons_frame, text="Vložit EU obrázky", command=self.insert_image_to_excel)
+        self.insert_image_button = ttk.Button(buttons_frame, text="Optimalizovat excely", command=self.compress_excel_files)
         self.insert_image_button.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
+
+        self.process_plants_button = ttk.Button(buttons_frame, text="Získat rostliny", command=self.process_txts_for_plants)
+        self.process_plants_button.grid(row=1, column=0, pady=10, padx=10, sticky="nsew")
+
+        self.compress_button = ttk.Button(buttons_frame, text="Vložit EU obrázky", command=self.insert_image_to_excel)
+        self.compress_button.grid(row=3, column=0, pady=10, padx=10, sticky="nsew")
 
         # Label verze
         self.version_label = ttk.Label(main_frame, text=current_version, font=("Helvetica", 10, "bold"))
@@ -183,8 +186,8 @@ class PlantCodeFinder(tk.Frame):
         self.quit_button = ttk.Button(main_frame, text="Ukončit", command=self.quit)
         self.quit_button.grid(row=10, column=2, padx=10, pady=10, sticky="e")
 
-        self.compress_button = ttk.Button(main_frame, text="Optimalizovat Excely", command=self.compress_excel_files)
-        self.compress_button.grid(row=9, column=0, pady=10, padx=10, sticky="w")
+        self.create_excel_button = ttk.Button(main_frame, text="Smazat vše", command=self.delete_codes_and_cz)
+        self.create_excel_button.grid(row=9, column=0, pady=10, padx=10, sticky="w")
                 
         # Section 4: New Buttons
         section4_label = ttk.Label(main_frame, text="Doplňující funkce", font=("Helvetica", 12, "bold"))
@@ -200,23 +203,24 @@ class PlantCodeFinder(tk.Frame):
 
         # New buttons grid
 
+        self.delete_codes_button = ttk.Button(new_buttons_frame, text="Přidat kód", command=self.manually_add_code)
+        self.delete_codes_button.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+
+        self.manage_added_codes_button = ttk.Button(new_buttons_frame, text="Spravovat kódy v paměti", command=self.manage_added_codes)
+        self.manage_added_codes_button.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+
         self.load_temporary_button = ttk.Button(new_buttons_frame, text="Načíst z dočasné", command=self.load_from_temporary)
-        self.load_temporary_button.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
-
-        self.send_email_button = ttk.Button(new_buttons_frame, text="Pochvala pro Martínka", command=self.send_email)
-        self.send_email_button.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
-
-        self.check_updates_button = ttk.Button(new_buttons_frame, text="Ořezat názvy", command=self.open_trim_names_window)
-        self.check_updates_button.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
+        self.load_temporary_button.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
 
         self.show_unmatched_button = ttk.Button(new_buttons_frame, text="Zobrazit neshody", command=self.show_unmatched_names)
-        self.show_unmatched_button.grid(row=0, column=1, pady=10, padx=10, sticky="nsew")
+        self.show_unmatched_button.grid(row=1, column=1, pady=10, padx=10, sticky="nsew")
 
-        self.process_plants_button = ttk.Button(new_buttons_frame, text="Získat rostliny", command=self.process_txts_for_plants)
-        self.process_plants_button.grid(row=2, column=1, pady=10, padx=10, sticky="nsew")
+        self.send_email_button = ttk.Button(new_buttons_frame, text="Pochvala pro Martínka", command=self.send_email)
+        self.send_email_button.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
 
         self.send_second_email_button = ttk.Button(new_buttons_frame, text="Bída pro Martínka", command=self.send_second_email)
-        self.send_second_email_button.grid(row=1, column=1, padx=10, pady=10, sticky="nsew")
+        self.send_second_email_button.grid(row=2, column=1, padx=10, pady=10, sticky="nsew")
+
 
         self.send_emails_button = ttk.Button(main_frame, text="Odeslat e-maily blbečkům", command=self.manage_recipients)
         self.send_emails_button.grid(row=10, column=0, pady=10, padx=10, sticky="w")
