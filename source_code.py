@@ -761,6 +761,11 @@ class PlantCodeFinder(tk.Frame):
         clear_button = ttk.Button(top, text="Vyčistit dočasnou", command=clear_temporary)
         clear_button.grid(row=4, column=1, padx=10, pady=10, sticky="e")
 
+        # Add a "Append to Template" button to append the data from temporary.xlsx to template.xlsx
+        append_button = ttk.Button(top, text="Zapsat z dočasné do templaty", command=self.append_to_template)
+        append_button.grid(row=5, column=1, padx=10, pady=10, sticky="e")
+
+
         def copy_to_clipboard(event):
             # Get the selected item
             selected_item = name_listbox.get(name_listbox.curselection())
@@ -813,6 +818,50 @@ class PlantCodeFinder(tk.Frame):
             self.output_console.insert(tk.END, f"Načteno z dočasné: {name} - {code} - {cz}\n")
             self.output_console.see(tk.END)
             self.output_console.update()
+
+    def append_to_template(self):
+        # Open Excel
+        excel = win32.gencache.EnsureDispatch('Excel.Application')
+
+        # Open the workbooks
+        temp_wb = excel.Workbooks.Open(os.path.abspath('temporary.xlsx'))
+        template_wb = excel.Workbooks.Open(os.path.abspath('template.xlsx'))
+
+        # Get the worksheets
+        temp_ws = temp_wb.Worksheets(1)
+        template_ws = template_wb.Worksheets(1)
+
+        # Get the last row in the template workbook
+        last_row = template_ws.Cells(template_ws.Rows.Count, 1).End(win32.constants.xlUp).Row
+
+        # Get the last row in the temporary workbook
+        last_row_temp = temp_ws.Cells(temp_ws.Rows.Count, 1).End(win32.constants.xlUp).Row
+
+        # Append the data from temporary.xlsx to the end of template.xlsx
+        range_to_copy = temp_ws.Range(f"A2:C{last_row_temp}")
+        range_to_copy.Copy(template_ws.Range(f"A{last_row + 1}"))
+
+        # Print each line to the output console
+        for i in range(2, last_row_temp + 1):
+            name = temp_ws.Cells(i, 1).Value
+            code = temp_ws.Cells(i, 2).Value
+            cz = temp_ws.Cells(i, 3).Value
+            self.output_console.insert(tk.END, f"Zapsáno: {name} - {code} - {cz}\n")
+            self.output_console.see(tk.END)
+            self.output_console.update()
+
+        # Save and close the workbooks
+        template_wb.Save()
+        temp_wb.Close(SaveChanges=False)
+        template_wb.Close()
+
+        # Quit Excel
+        excel.Quit()
+
+        # Print a message to the output console
+        self.output_console.insert(tk.END, "Data z dočasné byly zapsány do template.xlsx.\n")
+        self.output_console.see(tk.END)
+        self.output_console.update()
 
     def forget_added_codes(self, print_message=True):
         # Check if there are any added codes
