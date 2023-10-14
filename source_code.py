@@ -27,7 +27,7 @@ from tkinter import ttk, Toplevel, Text, Button, END, messagebox
 from openpyxl import load_workbook
 
 
-current_version = "v1.1.0"
+current_version = "v1.1.1"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 
 try:
