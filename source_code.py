@@ -1423,10 +1423,20 @@ class PlantCodeFinder(tk.Frame):
         def extract_plant_names_and_write_to_excel(file_path, invoice_number):
             plant_names = []
             with open(file_path, 'r', encoding='utf-8') as txt_file_obj:
-                for line in txt_file_obj:
+                lines = txt_file_obj.readlines()
+                i = 0
+                while i < len(lines):
+                    line = lines[i].strip()
+                    # If the line starts with '()' and does not end with 'Kč', concatenate it with the next lines until we find a line that ends with 'Kč'
+                    while line.startswith('()') and not line.endswith('Kč'):
+                        i += 1
+                        line += ' ' + lines[i].strip()
+                    # Add a space before the price
+                    line = re.sub(r'(\d+,\d+ Kč)', r' \1', line)
                     match = re.search(r'\(\)\s(.+)', line)
                     if match:
                         plant_names.append(match.group(1))
+                    i += 1
 
             # Create a new directory if it doesn't exist
             new_dir = 'faktury/txt/kytky'
