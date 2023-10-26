@@ -27,7 +27,7 @@ from tkinter import ttk, Toplevel, Text, Button, END, messagebox
 from openpyxl import load_workbook
 
 
-current_version = "v1.1.2"
+current_version = "v1.1.3"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 
 try:
@@ -120,7 +120,7 @@ class PlantCodeFinder(tk.Frame):
         main_frame.grid(row=0, column=0)
 
         # Configure the grid to have a minimum size and to expand with the window
-        for i in range(3):
+        for i in range(4):  # Increase the range to 4
             main_frame.columnconfigure(i, weight=1, minsize=150)
             main_frame.rowconfigure(i, weight=1, minsize=50)
 
@@ -130,6 +130,9 @@ class PlantCodeFinder(tk.Frame):
 
         buttons_frame = ttk.Frame(main_frame, borderwidth=2, relief="groove", padding=10)
         buttons_frame.grid(row=1, column=0, sticky="w")
+
+        # Empty Label to create space
+        ttk.Label(main_frame).grid(row=1, column=1)
 
         # Configure the grid to have a minimum size and to expand with the window
         for i in range(2):
@@ -184,30 +187,25 @@ class PlantCodeFinder(tk.Frame):
         self.fulfill_cz_checkbox.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
         # Section 3: Output console
-        section3_label = ttk.Label(main_frame, text="Výstup", font=("Helvetica", 12, "bold"))
-        section3_label.grid(row=6, column=0, pady=(20, 10), sticky="w")
+        self.output_console = tk.Text(main_frame, wrap=tk.WORD, height=15, width=100, relief="sunken", borderwidth=1)  # Increase height
+        self.output_console.grid(row=7, column=0, columnspan=4, padx=10, pady=10)
 
-        self.output_console = tk.Text(main_frame, wrap=tk.WORD, height=10, width=80, relief="sunken", borderwidth=1)
-        self.output_console.grid(row=7, column=0, columnspan=3, padx=10, pady=10)
 
         # Quit button
         self.quit_button = ttk.Button(main_frame, text="Ukončit", command=self.quit)
-        self.quit_button.grid(row=10, column=2, padx=10, pady=10, sticky="e")
-
-        self.create_excel_button = ttk.Button(main_frame, text="Smazat vše", command=self.delete_codes_and_cz)
-        self.create_excel_button.grid(row=9, column=0, pady=10, padx=10, sticky="w")
+        self.quit_button.grid(row=9, column=3, padx=10, pady=10, sticky="e")
                 
         # Section 4: New Buttons
         section4_label = ttk.Label(main_frame, text="Doplňující funkce", font=("Helvetica", 12, "bold"))
-        section4_label.grid(row=2, column=0, pady=(20, 10), sticky="w")
+        section4_label.grid(row=0, column=2, pady=(0, 10), sticky="w")  # Change column to 2
 
         new_buttons_frame = ttk.Frame(main_frame, borderwidth=2, relief="groove", padding=10)
-        new_buttons_frame.grid(row=3, column=0, sticky="w")
+        new_buttons_frame.grid(row=1, column=2, sticky="w")  # Change column to 2
 
         # Configure the grid to have a minimum size and to expand with the window
-        for i in range(2):
-            new_buttons_frame.columnconfigure(i, weight=1, minsize=150)
-            new_buttons_frame.rowconfigure(i, weight=1, minsize=50)
+        #for i in range(2):
+         #   new_buttons_frame.columnconfigure(i, weight=1, minsize=150)
+          #  new_buttons_frame.rowconfigure(i, weight=1, minsize=50)
 
         # New buttons grid
 
@@ -225,16 +223,20 @@ class PlantCodeFinder(tk.Frame):
 
         self.send_email_button = ttk.Button(new_buttons_frame, text="Pochvala pro Martínka", command=self.send_email)
         self.send_email_button.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
+        
 
         self.send_second_email_button = ttk.Button(new_buttons_frame, text="Bída pro Martínka", command=self.send_second_email)
         self.send_second_email_button.grid(row=2, column=1, padx=10, pady=10, sticky="nsew")
 
 
-        self.send_emails_button = ttk.Button(main_frame, text="Odeslat e-maily blbečkům", command=self.manage_recipients)
-        self.send_emails_button.grid(row=10, column=0, pady=10, padx=10, sticky="w")
+        self.send_emails_button = ttk.Button(new_buttons_frame, text="Odeslat e-maily blbečkům", command=self.manage_recipients)
+        self.send_emails_button.grid(row=3, column=0, pady=10, padx=10, sticky="w")
+
+        self.create_excel_button = ttk.Button(new_buttons_frame, text="Smazat všecko v Excelu", command=self.delete_codes_and_cz)
+        self.create_excel_button.grid(row=3, column=1, pady=10, padx=10, sticky="w")
 
         self.trim_names_button = ttk.Button(main_frame, text="Zkontrolovat aktualizace", command=self.check_for_updates)
-        self.trim_names_button.grid(row=9, column=2, pady=10, padx=10, sticky="w")
+        self.trim_names_button.grid(row=9, column=0, pady=10, padx=10, sticky="w")
 
         # Initialize instance variables
         self.template_wb = openpyxl.load_workbook(self.get_template())
