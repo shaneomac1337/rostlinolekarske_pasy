@@ -1496,7 +1496,7 @@ class PlantCodeFinder(tk.Frame):
     def open_trim_names_window(self):
         new_window = Toplevel(self.master)
         new_window.title("Ořezat názvy")
-        new_window.geometry("1230x968")  # Set the size of the window
+        new_window.geometry("1230x900")  # Set the size of the window
 
         listbox_widget = tk.Listbox(new_window, height=35, width=200)
         listbox_widget.grid(row=0, column=0, columnspan=3, padx=10, pady=10)
