@@ -25,6 +25,7 @@ from openpyxl.utils import get_column_letter
 import shutil
 from tkinter import ttk, Toplevel, Text, Button, END, messagebox
 from openpyxl import load_workbook
+import gc
 
 
 current_version = "v1.1.3"
@@ -981,6 +982,10 @@ class PlantCodeFinder(tk.Frame):
         # Load a sheet into a DataFrame by its name
         df_dict = {sheet_name: xl.parse(sheet_name) for sheet_name in xl.sheet_names}
 
+        # Delete the ExcelFile object
+        del xl
+
+
         # Create a new workbook
         wb = openpyxl.Workbook()
 
@@ -1059,11 +1064,14 @@ class PlantCodeFinder(tk.Frame):
         del wb['Sheet']
         wb.save(input_file)
 
+        # Force garbage collection
+        gc.collect()
+
         # Display a message in the console
         self.output_console.insert(tk.END, f"Soubor {input_file} byl optimalizován.\n")
         self.output_console.see(tk.END)  # Auto-scroll to the end
         self.output_console.update()  # Ensure the output console is updated
- 
+    
     def compress_excel_files(self):
         excel_files = [f for f in os.listdir() if f.endswith('.xlsx') and f not in ['template.xlsx', 'temporary.xlsx']]
         for file in excel_files:
