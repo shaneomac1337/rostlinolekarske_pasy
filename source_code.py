@@ -1011,6 +1011,14 @@ class PlantCodeFinder(tk.Frame):
             ws['D7'].font = bold_font
             ws['D8'].font = bold_font
 
+            # Set font to bold and size to 14 for cells D9 and D10 if they contain any text
+            if ws['D9'].value:
+                ws['D9'].font = bold_font
+                ws.merge_cells('D9:E9')
+            if ws['D10'].value:
+                ws['D10'].font = bold_font
+                ws.merge_cells('D10:E10') 
+
             # Set column widths
             ws.column_dimensions['B'].width = 4.71
             ws.column_dimensions['C'].width = 48.71
@@ -1059,6 +1067,23 @@ class PlantCodeFinder(tk.Frame):
                 for row in range(13, last_row):
                     cell = ws[col + str(row)]
                     cell.font = arial_11_font
+
+            # Define a flag for whether "Endopa" is found and replaced
+            endopa_replaced = False
+
+            # Remove the word "Endopa" from cells D13 and further down
+            for row in range(13, last_row):
+                cell = ws['D' + str(row)]
+                if cell.value and isinstance(cell.value, str) and "-CHZ-ENDOPA" in cell.value:
+                    cell.value = cell.value.replace("-CHZ-ENDOPA", "")
+                    endopa_replaced = True
+
+           # If "Endopa" was found and replaced, set the text in cells D7, D8, D9, and D10
+            if endopa_replaced:
+                ws['D7'].value = "Rostlinolékařský pas"
+                ws['D8'].value = "Plant Passport - PZ"
+                ws['D9'].value = "ENDOPA"
+                ws['D10'].value = "B: CZ - 0550"              
 
         # Delete the default sheet created and save the workbook
         del wb['Sheet']
