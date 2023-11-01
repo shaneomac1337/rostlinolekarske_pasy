@@ -26,6 +26,7 @@ import shutil
 from tkinter import ttk, Toplevel, Text, Button, END, messagebox
 from openpyxl import load_workbook
 import gc
+from openpyxl import Workbook
 
 
 current_version = "v1.1.3"
@@ -1098,7 +1099,7 @@ class PlantCodeFinder(tk.Frame):
         self.output_console.update()  # Ensure the output console is updated
     
     def compress_excel_files(self):
-        excel_files = [f for f in os.listdir() if f.endswith('.xlsx') and f not in ['template.xlsx', 'temporary.xlsx']]
+        excel_files = [f for f in os.listdir() if f.endswith('.xlsx') and f not in ['template.xlsx', 'temporary.xlsx','excluded_plant_names.xlsx']]
         for file in excel_files:
             self.compress_excel_file(input_file=file)  # Use 'self' to call the method
 
@@ -1455,30 +1456,36 @@ class PlantCodeFinder(tk.Frame):
         affected_excel_files = []
         unmatched_excel_files = []
 
-        def extract_plant_names_and_write_to_excel(file_path, invoice_number):
+        def extract_plant_names_and_write_to_excel(file_path, invoice_number, excluded_plant_names):
             plant_names = []
             with open(file_path, 'r', encoding='utf-8') as txt_file_obj:
                 lines = txt_file_obj.readlines()
                 i = 0
                 while i < len(lines):
                     line = lines[i].strip()
-                    # If the line starts with '()' and does not end with 'Kč', concatenate it with the next lines until we find a line that ends with 'Kč'
                     while line.startswith('()') and not line.endswith('Kč'):
                         i += 1
                         line += ' ' + lines[i].strip()
-                    # Add a space before the price
                     line = re.sub(r'(\d+,\d+ Kč)', r' \1', line)
                     match = re.search(r'\(\)\s(.+)', line)
                     if match:
-                        plant_names.append(match.group(1))
+                        plant_name = match.group(1)
+                        if ("semen" in plant_name or "hlíz" in plant_name) and "semenáč" not in plant_name:
+                            excluded_plant_names.append((invoice_number, plant_name))  # Add the invoice number and the excluded plant name to the list
+                        else:
+                            plant_names.append(plant_name)
                     i += 1
 
-            # Create a new directory if it doesn't exist
+            # Write the excluded plant names to a separate text file
+            with open('excluded_plant_names.txt', 'a', encoding='utf-8') as f:
+                for plant_name in excluded_plant_names:
+                    f.write(f'{plant_name}\n')
+
+
             new_dir = 'faktury/txt/kytky'
             if not os.path.exists(new_dir):
                 os.makedirs(new_dir)
 
-            # Create a new file in the new directory with plant names
             with open(f'{new_dir}/kytky_{invoice_number}.txt', 'w', encoding='utf-8') as f:
                 for plant_name in plant_names:
                     f.write(f'{plant_name}\n')
@@ -1489,8 +1496,8 @@ class PlantCodeFinder(tk.Frame):
                 workbook = load_workbook(excel_file)
                 if invoice_number in workbook.sheetnames:
                     worksheet = workbook[invoice_number]
-                    start_row = 13  # Start from row 13
-                    col = get_column_letter(3)  # Column D
+                    start_row = 13
+                    col = get_column_letter(3)
                     max_length = 0
                     column = col
                     for i, plant_name in enumerate(plant_names, start=start_row):
@@ -1505,7 +1512,9 @@ class PlantCodeFinder(tk.Frame):
                     if excel_file not in unmatched_excel_files:
                         unmatched_excel_files.append(excel_file)
 
+
         # Process each .txt file
+        excluded_plant_names = []  # Define the list outside of the function
         for txt_file in txt_files:
             # Skip 'kytky_plant_names.txt' and 'plant_names.txt'
             if txt_file in ['kytky_plant_names.txt', 'plant_names.txt']:
@@ -1517,13 +1526,27 @@ class PlantCodeFinder(tk.Frame):
 
             invoice_number = os.path.splitext(txt_file)[0].replace('kytky_', '')  # Get the invoice number from the file name
             txt_path = os.path.join('faktury/txt', txt_file)
-            extract_plant_names_and_write_to_excel(txt_path, invoice_number)
+            extract_plant_names_and_write_to_excel(txt_path, invoice_number, excluded_plant_names)
 
         self.output_console.insert(tk.END, "Zpracování dokončeno.\n")
         self.output_console.insert(tk.END, f"Excely které jsem naplnil rostlinami: {', '.join(affected_excel_files)}\n")
         self.output_console.insert(tk.END, f"Excely obsahující jiné faktury a tudíž nebyly naplněny rostlinami: {', '.join(unmatched_excel_files)}\n")
         self.output_console.see(tk.END)  # Auto-scroll to the end
         self.output_console.update()  # Ensure the output console is updated
+
+
+        # Write the excluded plant names to a separate text file and Excel file
+        with open('excluded_plant_names.txt', 'a', encoding='utf-8') as f:
+            wb = Workbook()
+            ws = wb.active
+            ws.append(["Invoice Number", "Excluded Plant Name"])  # Add the header to the Excel file
+            for invoice_number, plant_name in excluded_plant_names:
+                f.write(f'{invoice_number}: {plant_name}\n')
+                ws.append([invoice_number, plant_name])  # Append the invoice number and the plant name to the Excel file
+            ws.auto_filter.ref = ws.dimensions  # Add autofilter to the worksheet
+            wb.save("excluded_plant_names.xlsx")  # Save the Excel file
+
+        os.remove('excluded_plant_names.txt')  # Delete the text file
 
 
     def open_trim_names_window(self):
