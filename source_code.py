@@ -33,7 +33,7 @@ import queue
 from openpyxl.styles import NamedStyle
 
 
-current_version = "v1.1.3"
+current_version = "v1.2.0"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 
 try:
@@ -437,7 +437,7 @@ class PlantCodeFinder(tk.Frame):
             messagebox.showerror("Chyba", "Olinka už mi zase nedala Excely, dělá si ze mě prdel??")
         else:
             for filename in os.listdir('.'):
-                if not filename.endswith('.xlsx') or filename == 'template.xlsx':
+                if not filename.endswith('.xlsx') or filename in ['template.xlsx', 'temporary.xlsx']:
                     continue 
                 wb = openpyxl.load_workbook(filename)
                 for sheet in wb:
@@ -1241,7 +1241,7 @@ class PlantCodeFinder(tk.Frame):
                 cell = ws['D' + str(row)]
                 if cell.value and isinstance(cell.value, str) and "-CHZ-ENDOPA" in cell.value:
                     # Print a message to the console before replacing "Endopa"
-                    self.output_console.insert(tk.END, f"Replacing Endopa in sheet {sheet_name} of file {input_file}.\n")
+                    self.output_console.insert(tk.END, f"Řeším Endopu pro: {sheet_name} v souboru: {input_file}.\n")
                     self.output_console.see(tk.END)  # Auto-scroll to the end
                     self.output_console.update()  # Ensure the output console is updated
 
@@ -1263,7 +1263,7 @@ class PlantCodeFinder(tk.Frame):
         gc.collect()
 
         # Display a message in the console
-        self.output_console.insert(tk.END, f"Soubor {input_file} byl optimalizován.\n")
+        self.output_console.insert(tk.END, f"ENDOPA pro soubor {input_file} je v cajku.\n")
         self.output_console.see(tk.END)  # Auto-scroll to the end
         self.output_console.update()  # Ensure the output console is updated
 
@@ -2031,7 +2031,27 @@ class PlantCodeFinder(tk.Frame):
                 self.output_console.insert(tk.END, "Olinka tu nemá žádné duplicity, všechno je v oukeji.\n")
                 self.output_console.see(tk.END)
                 self.output_console.update()
-                    
+
+        # Your additional script starts here
+        directory = os.getcwd()
+
+        for filename in os.listdir(directory):
+            if not filename.endswith('.xlsx') or filename in ['temporary.xlsx', 'template.xlsx']:
+                continue
+
+            filepath = os.path.join(directory, filename)
+            wb = openpyxl.load_workbook(filepath)
+
+            for sheet in wb.sheetnames:
+                if not wb[sheet]['C13'].value:
+                    self.output_console.insert(tk.END, f"Mažu sheet: {sheet} z: {filename} protože píčus zákazník nakoupil jen hlízu nebo semeno a mně to kvuli němu nefungovalo a sheet by byl tedy prázdný a Olinka by posílala maily s prázdnými pasy.\n")
+                    self.output_console.see(tk.END)
+                    self.output_console.update()
+                    del wb[sheet]
+
+            wb.save(filepath)
+        # Your additional script ends here
+
     def quit(self):
         self.master.destroy()
 
