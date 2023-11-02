@@ -30,6 +30,7 @@ from openpyxl import Workbook
 import threading
 import pythoncom
 import queue
+from openpyxl.styles import NamedStyle
 
 
 current_version = "v1.1.3"
@@ -155,7 +156,7 @@ class PlantCodeFinder(tk.Frame):
         self.create_excel_button.grid(row=3, column=0, pady=10, padx=10, sticky="nsew")
 
         self.process_pdf_button = ttk.Button(buttons_frame, text="Uložit Excely jako PDFka", command=self.save_all_excels_as_pdfs)
-        self.process_pdf_button.grid(row=3, column=1, pady=10, padx=10, sticky="nsew")
+        self.process_pdf_button.grid(row=4, column=1, pady=10, padx=10, sticky="nsew")
 
         self.check_updates_button = ttk.Button(buttons_frame, text="Ořezat názvy", command=self.open_trim_names_window)
         self.check_updates_button.grid(row=1, column=1, pady=10, padx=10, sticky="nsew")
@@ -163,14 +164,20 @@ class PlantCodeFinder(tk.Frame):
         self.save_excels_as_pdfs_button = ttk.Button(buttons_frame, text="Zpracovat soubory", command=self.process_files)
         self.save_excels_as_pdfs_button.grid(row=2, column=1, padx=10, pady=10, sticky="nsew")
 
-        self.insert_image_button = ttk.Button(buttons_frame, text="Optimalizovat excely", command=self.compress_excel_files)
-        self.insert_image_button.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
+        self.compress_button = ttk.Button(buttons_frame, text="Optimalizovat excely", command=self.compress_excel_files)
+        self.compress_button.grid(row=2, column=0, padx=10, pady=10, sticky="nsew")
 
         self.process_plants_button = ttk.Button(buttons_frame, text="Získat rostliny", command=self.process_txts_for_plants)
         self.process_plants_button.grid(row=1, column=0, pady=10, padx=10, sticky="nsew")
 
-        self.compress_button = ttk.Button(buttons_frame, text="Vložit EU obrázky", command=self.insert_image_to_excel)
-        self.compress_button.grid(row=3, column=0, pady=10, padx=10, sticky="nsew")
+        self.remove_duplicates_button = ttk.Button(buttons_frame, text="Remove Duplicates", command=self.remove_duplicates)
+        self.remove_duplicates_button.grid(row=3, column=0, padx=10, pady=10, sticky="nsew")
+
+        self.insert_image_button = ttk.Button(buttons_frame, text="Vložit EU obrázky", command=self.insert_image_to_excel)
+        self.insert_image_button.grid(row=4, column=0, pady=10, padx=10, sticky="nsew")
+
+        self.optimize_button = ttk.Button(buttons_frame, text="Vyřešit ENDOPA", command=self.optimize_excel_files)
+        self.optimize_button.grid(row=3, column=1, padx=10, pady=10, sticky="nsew")
 
         # Label verze
         self.version_label = ttk.Label(main_frame, text=current_version, font=("Helvetica", 10, "bold"))
@@ -1131,7 +1138,146 @@ class PlantCodeFinder(tk.Frame):
         # Display a message in the console when all files have been compressed
         self.output_console.insert(tk.END, "Všechny excely byly optimalizovány.\n")
         self.output_console.see(tk.END)  # Auto-scroll to the end
-        self.output_console.update()  # Ensure the output console is updated  
+        self.output_console.update()  # Ensure the output console is updated
+
+
+    def optimize_excel_file(self, input_file):  # input_file should be the first argument after self
+        # Load spreadsheet
+        xl = pd.ExcelFile(input_file)
+
+        # Load a sheet into a DataFrame by its name
+        df_dict = {sheet_name: xl.parse(sheet_name) for sheet_name in xl.sheet_names}
+
+        # Delete the ExcelFile object
+        del xl
+
+        # Create a new workbook
+        wb = openpyxl.Workbook()
+
+        for sheet_name, df in df_dict.items():
+            # Create a new sheet
+            ws = wb.create_sheet(title=sheet_name)
+
+            # Write DataFrame to worksheet
+            for r in dataframe_to_rows(df, index=False, header=True):
+                ws.append(r)
+
+            # Delete cells A1-E1
+            for col in ['A', 'B', 'C', 'D', 'E']:
+                ws[col + '1'].value = None
+
+            # Merge cells D7-E7, D8-E8, and C6-C10
+            ws.merge_cells('D7:E7')
+            ws.merge_cells('D8:E8')
+            ws.merge_cells('C6:C10')
+
+            # Set font to bold and size to 14 for cells D7 and D8
+            bold_font = Font(bold=True, size=14)
+            ws['D7'].font = bold_font
+            ws['D8'].font = bold_font
+
+            # Set font to bold and size to 14 for cells D9 and D10 if they contain any text
+            if ws['D9'].value:
+                ws['D9'].font = bold_font
+                ws.merge_cells('D9:E9')
+            if ws['D10'].value:
+                ws['D10'].font = bold_font
+                ws.merge_cells('D10:E10') 
+
+            # Set column widths
+            ws.column_dimensions['B'].width = 4.71
+            ws.column_dimensions['C'].width = 48.71
+            ws.column_dimensions['D'].width = 21.14
+            ws.column_dimensions['E'].width = 23.85
+            ws.column_dimensions['F'].width = 4.28
+
+            # Define border styles
+            left_border = Border(left=Side(style='thin'))
+            right_border = Border(right=Side(style='thin'))
+            top_border = Border(top=Side(style='thin'))
+            bottom_border = Border(bottom=Side(style='thin'))
+            inside_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+
+            # Determine the last row with data in column C
+            last_row = max(31, max((cell.row for cell in ws['C'] if cell.value is not None)) + 1)
+
+            # Apply borders to the range B5:F31 (or B5:F32 if there's data in C31)
+            for row in ws.iter_rows(min_row=5, max_row=last_row, min_col=2, max_col=6):
+                for cell in row:
+                    if cell.row == 5:
+                        cell.border += top_border
+                    if cell.row == last_row:
+                        cell.border += bottom_border
+                    if cell.column == 2:  # Column B
+                        cell.border += left_border
+                    if cell.column == 6:  # Column F
+                        cell.border += right_border
+
+            # Apply inside borders to the range C12:E30 (or further if there's data in C31 or beyond)
+            for row in ws.iter_rows(min_row=12, max_row=last_row-1, min_col=3, max_col=5):
+                for cell in row:
+                    cell.border = inside_border
+
+            # Make C12, D12, E12 align on center and bold
+            center_aligned_bold_font = Font(bold=True)
+            center_alignment = Alignment(horizontal='center')
+            for col in ['C', 'D', 'E']:
+                cell = ws[col + '12']
+                cell.font = center_aligned_bold_font
+                cell.alignment = center_alignment
+
+            # Change the font of C13 and further down, D13 and further down, and E13 and further down to Arial 11
+            arial_11_font = Font(name='Arial', size=10)
+            for col in ['C', 'D', 'E']:
+                for row in range(13, last_row):
+                    cell = ws[col + str(row)]
+                    cell.font = arial_11_font
+
+            # Define a flag for whether "Endopa" is found and replaced
+            endopa_replaced = False
+
+            # Remove the word "Endopa" from cells D13 and further down
+            for row in range(13, last_row):
+                cell = ws['D' + str(row)]
+                if cell.value and isinstance(cell.value, str) and "-CHZ-ENDOPA" in cell.value:
+                    # Print a message to the console before replacing "Endopa"
+                    self.output_console.insert(tk.END, f"Replacing Endopa in sheet {sheet_name} of file {input_file}.\n")
+                    self.output_console.see(tk.END)  # Auto-scroll to the end
+                    self.output_console.update()  # Ensure the output console is updated
+
+                    cell.value = cell.value.replace("-CHZ-ENDOPA", "")
+                    endopa_replaced = True
+        # If "Endopa" was found and replaced, set the text in cells D7, D8, D9, and D10
+            if endopa_replaced:
+                ws['D7'].value = "Rostlinolékařský pas"
+                ws['D8'].value = "Plant Passport - PZ"
+                ws['D9'].value = "ENDOPA"
+                ws['D10'].value = "B: CZ - 0550"
+           
+
+        # Delete the default sheet created and save the workbook
+        del wb['Sheet']
+        wb.save(input_file)
+
+        # Force garbage collection
+        gc.collect()
+
+        # Display a message in the console
+        self.output_console.insert(tk.END, f"Soubor {input_file} byl optimalizován.\n")
+        self.output_console.see(tk.END)  # Auto-scroll to the end
+        self.output_console.update()  # Ensure the output console is updated
+
+    def optimize_excel_files(self):
+        excel_files = [f for f in os.listdir() if f.endswith('.xlsx') and f not in ['template.xlsx', 'temporary.xlsx','excluded_plant_names.xlsx']]
+        for file in excel_files:
+            self.optimize_excel_file(input_file=file)  # Use 'self' to call the method
+
+        # Display a message in the console when all files have been optimized
+        self.output_console.insert(tk.END, "ENDOPA vyřešena.\n")
+        self.output_console.see(tk.END)  # Auto-scroll to the end
+        self.output_console.update()  # Ensure the output console is updated
+
+      
 
     def manage_recipients(self):
         # Create a new dialog
@@ -1564,15 +1710,40 @@ class PlantCodeFinder(tk.Frame):
         with open('excluded_plant_names.txt', 'a', encoding='utf-8') as f:
             wb = Workbook()
             ws = wb.active
-            ws.append(["Invoice Number", "Excluded Plant Name"])  # Add the header to the Excel file
+            ws.append(["Číslo faktury", "Název rostliny"])  # Add the header to the Excel file
             for invoice_number, plant_name in excluded_plant_names:
                 f.write(f'{invoice_number}: {plant_name}\n')
                 ws.append([invoice_number, plant_name])  # Append the invoice number and the plant name to the Excel file
+
             ws.auto_filter.ref = ws.dimensions  # Add autofilter to the worksheet
-            wb.save("excluded_plant_names.xlsx")  # Save the Excel file
+
+            # Adjust column width
+            for column in ws.columns:
+                max_length = 0
+                column = [cell for cell in column]
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(cell.value)
+                    except:
+                        pass
+                adjusted_width = (max_length + 2)
+                ws.column_dimensions[column[0].column_letter].width = adjusted_width
+
+            wb.save("faktury/excluded_plant_names.xlsx")
 
         os.remove('excluded_plant_names.txt')  # Delete the text file
 
+        # Ask the user if they want to open the created Excel file
+        if messagebox.askyesno("Otevřít soubor", "Moje milá Olinko, máš to hotové a protože jsi to ty a já ti chtěl udělat radost, vytvořil jsem ti soubor, kde je zaznamenáno veškeré semeno a hlíza které jsem dal pryč, chtěla bys tam nahlédnout?"):
+            # Get the directory of the current script
+            script_dir = os.path.dirname(os.path.realpath(__file__))
+
+            # Construct the path to the file
+            file_path = os.path.join(script_dir, 'faktury', 'excluded_plant_names.xlsx')
+
+            # Open the file
+            os.startfile(file_path)
 
     def open_trim_names_window(self):
         new_window = Toplevel(self.master)
@@ -1806,10 +1977,61 @@ class PlantCodeFinder(tk.Frame):
         # Update the listbox with the new dictionary values
         self.update_listbox_with_dictionary(listbox_widget)
 
-        
+    def remove_duplicates(self):
+        duplicates_found = False
 
+        for filename in os.listdir('.'):
+            if not filename.endswith('.xlsx') or filename == 'template.xlsx' or filename == 'temporary.xlsx':
+                continue
+
+            wb = openpyxl.load_workbook(filename)
+
+            for sheet in wb:
+                ws = wb[sheet.title]
+                unique_values = set()
+
+                # Create a new sheet to store the non-duplicate rows
+                new_ws = wb.create_sheet(title=f"{ws.title}_no_duplicates")
                 
-            
+                new_row = 1  # Counter for the new sheet's row
+                for row in range(1, ws.max_row + 1):  # Start from 1 to include headers
+                    value = ws.cell(row=row, column=3).value
+                    
+                    if row >= 13 and value and value in unique_values:
+                        self.output_console.insert(tk.END, f"Nalezena duplicita: {value} v souboru: {filename}, sheet: {sheet.title}, řádek: {row}\n")
+                        self.output_console.see(tk.END)
+                        self.output_console.update()
+                        duplicates_found = True
+                        continue  # Skip this row, don't copy it to the new sheet
+
+                    # If value is valid and not a duplicate, add it to the set and copy the row to the new sheet
+                    if row < 13 or value:  # Always copy headers
+                        if value:
+                            unique_values.add(value)
+                        for col in range(1, ws.max_column + 1):  # Copy all columns
+                            new_cell = new_ws.cell(row=new_row, column=col)
+                            old_cell = ws.cell(row=row, column=col)
+                            # Copy style attributes
+                            new_cell.font = copy(old_cell.font)
+                            new_cell.border = copy(old_cell.border)
+                            new_cell.fill = copy(old_cell.fill)
+                            new_cell.number_format = copy(old_cell.number_format)
+                            new_cell.protection = copy(old_cell.protection)
+                            new_cell.alignment = copy(old_cell.alignment)
+                            new_cell.value = old_cell.value
+                        new_row += 1  # Move to the next row in the new sheet
+
+                # Delete the old sheet and rename the new one
+                wb.remove(ws)
+                new_ws.title = sheet.title
+
+            wb.save(filename)
+
+            if not duplicates_found:
+                self.output_console.insert(tk.END, "Olinka tu nemá žádné duplicity, všechno je v oukeji.\n")
+                self.output_console.see(tk.END)
+                self.output_console.update()
+                    
     def quit(self):
         self.master.destroy()
 
