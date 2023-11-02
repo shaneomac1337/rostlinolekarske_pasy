@@ -31,6 +31,7 @@ import threading
 import pythoncom
 import queue
 from openpyxl.styles import NamedStyle
+import webbrowser
 
 
 current_version = "v1.2.0"
@@ -170,7 +171,7 @@ class PlantCodeFinder(tk.Frame):
         self.process_plants_button = ttk.Button(buttons_frame, text="Získat rostliny", command=self.process_txts_for_plants)
         self.process_plants_button.grid(row=1, column=0, pady=10, padx=10, sticky="nsew")
 
-        self.remove_duplicates_button = ttk.Button(buttons_frame, text="Remove Duplicates", command=self.remove_duplicates)
+        self.remove_duplicates_button = ttk.Button(buttons_frame, text="Odebrat duplicity a listy", command=self.remove_duplicates)
         self.remove_duplicates_button.grid(row=3, column=0, padx=10, pady=10, sticky="nsew")
 
         self.insert_image_button = ttk.Button(buttons_frame, text="Vložit EU obrázky", command=self.insert_image_to_excel)
@@ -249,6 +250,12 @@ class PlantCodeFinder(tk.Frame):
 
         self.trim_names_button = ttk.Button(main_frame, text="Zkontrolovat aktualizace", command=self.check_for_updates)
         self.trim_names_button.grid(row=9, column=0, pady=10, padx=10, sticky="w")
+
+        self.open_tropik_button = ttk.Button(new_buttons_frame, text="Tropik.cz", command=self.open_tropik)
+        self.open_tropik_button.grid(row=4, column=0, pady=10, padx=10, sticky="nsew")
+
+        self.open_eshop_tropik_button = ttk.Button(new_buttons_frame, text="Eshop Tropik", command=self.open_eshop_tropik)
+        self.open_eshop_tropik_button.grid(row=4, column=1, pady=10, padx=10, sticky="nsew")
 
         # Initialize instance variables
         self.template_wb = openpyxl.load_workbook(self.get_template())
@@ -2051,6 +2058,13 @@ class PlantCodeFinder(tk.Frame):
 
             wb.save(filepath)
         # Your additional script ends here
+
+    def open_tropik(self):
+        webbrowser.open('https://www.tropik.cz')
+
+    def open_eshop_tropik(self):
+        webbrowser.open('https://eshop.tropik.cz')
+    
 
     def quit(self):
         self.master.destroy()
