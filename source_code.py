@@ -409,12 +409,12 @@ class PlantCodeFinder(tk.Frame):
 
                 # Write missing plant names to a text file in the "missing" folder
                 if missing_names:
-                    with open(f"missing/{filename}_{sheet.title}_missing_names.txt", 'w') as f:
+                    with open(f"missing/{filename}_{sheet.title}_missing_names.txt", 'w', encoding='utf-8') as f:
                         f.write(f"Missing names v excel sheetu:  '{sheet.title}' v souboru '{filename}':\n")
                         for name, row in missing_names:
                             f.write(f"Jméno '{name}' chybí na řádce {row}\n")
                 elif not self.delete_checkbox_var.get():
-                    with open(f"missing/{filename}_{sheet.title}_is_okay.txt", 'w') as f:
+                    with open(f"missing/{filename}_{sheet.title}_is_okay.txt", 'w', encoding='utf-8') as f:
                         f.write(f"Všechna jména se nachází v excel sheetu: '{sheet.title}' v souboru: '{filename}'\n")
 
         # Delete files without missing plant names if the checkbox is checked
