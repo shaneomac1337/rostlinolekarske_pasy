@@ -27,9 +27,6 @@ from tkinter import ttk, Toplevel, Text, Button, END, messagebox
 from openpyxl import load_workbook
 import gc
 from openpyxl import Workbook
-import threading
-import pythoncom
-import queue
 from openpyxl.styles import NamedStyle
 import webbrowser
 
@@ -470,18 +467,14 @@ class PlantCodeFinder(tk.Frame):
             self.output_console.see(tk.END)  # Auto-scroll to the end
             self.output_console.update()  # Ensure the output console is updated
 
-    def save_excel_as_pdf(self, excel_file, sheet_name, queue):
+    def save_excel_as_pdf(self, excel_file, sheet_name):
         """Save the given sheet in excel file as pdf in the 'pdf' folder."""
-        pythoncom.CoInitialize()  # Initialize the COM library
-
         pdf_folder = "pdf"
         if not os.path.exists(pdf_folder):
             os.makedirs(pdf_folder)
 
         pdf_file = f"{pdf_folder}/{sheet_name}.pdf"
 
-        xlApp = None
-        wb = None
         try:
             xlApp = win32com.client.Dispatch("Excel.Application")
             xlApp.Visible = False
@@ -494,44 +487,26 @@ class PlantCodeFinder(tk.Frame):
             ws.PageSetup.FitToPagesTall = 1  # Fit to 1 page tall
             ws.ExportAsFixedFormat(0, os.path.abspath(pdf_file))
 
-            queue.put(f"Uloženo jako:{sheet_name}\n")  # Put progress information onto the queue
-
         except Exception as e:
             print(f"Failed to convert {excel_file} - {sheet_name} to PDF: {e}")
 
         finally:
-            if wb is not None:
-                wb.Close(SaveChanges=False)
-            if xlApp is not None:
-                xlApp.Quit()
+            wb.Close(SaveChanges=False)
+            xlApp.Quit()
 
 
     def save_all_excels_as_pdfs(self):
         has_excel_files = False
-        threads = []
-        progress_queue = queue.Queue()  # Create a thread-safe queue
-
         for filename in os.listdir('.'):
             if filename.endswith('.xlsx') and filename != 'template.xlsx' and filename != 'temporary.xlsx':
                 has_excel_files = True
                 wb = openpyxl.load_workbook(filename)
                 for sheet in wb:
-                    thread = threading.Thread(target=self.save_excel_as_pdf, args=(filename, sheet.title, progress_queue))
-                    thread.start()
-                    threads.append(thread)
-
-        # Periodically check the queue and update the GUI
-        while any(thread.is_alive() for thread in threads):
-            while not progress_queue.empty():
-                progress = progress_queue.get()
-                self.output_console.insert(tk.END, progress)
-                self.output_console.see(tk.END)  # Auto-scroll to the end
-                self.output_console.update()  # Ensure the output console is updated
-
-        # Wait for all threads to complete
-        for thread in threads:
-            thread.join()
-
+                    self.save_excel_as_pdf(filename, sheet.title)
+                    self.output_console.insert(tk.END, f"Uloženo jako:{sheet.title}\n")
+                    self.output_console.see(tk.END)  # Auto-scroll to the end
+                    self.output_console.update()  # Ensure the output console is updated
+    
         if not has_excel_files:
             messagebox.showerror("Chyba", "A teď zase Olinka nedodala Excely na konvertování do PDF. Bože muj.")
         else:
