@@ -29,6 +29,9 @@ import gc
 from openpyxl import Workbook
 from openpyxl.styles import NamedStyle
 import webbrowser
+import threading
+import queue
+import pythoncom
 
 
 current_version = "v1.2.0"
@@ -467,7 +470,7 @@ class PlantCodeFinder(tk.Frame):
             self.output_console.see(tk.END)  # Auto-scroll to the end
             self.output_console.update()  # Ensure the output console is updated
 
-    def save_excel_as_pdf(self, excel_file, sheet_name):
+    def save_excel_as_pdf(self, excel_file, sheet_name, queue):
         """Save the given sheet in excel file as pdf in the 'pdf' folder."""
         pdf_folder = "pdf"
         if not os.path.exists(pdf_folder):
@@ -475,7 +478,9 @@ class PlantCodeFinder(tk.Frame):
 
         pdf_file = f"{pdf_folder}/{sheet_name}.pdf"
 
+        wb = None
         try:
+            pythoncom.CoInitialize()
             xlApp = win32com.client.Dispatch("Excel.Application")
             xlApp.Visible = False
 
@@ -491,29 +496,44 @@ class PlantCodeFinder(tk.Frame):
             print(f"Failed to convert {excel_file} - {sheet_name} to PDF: {e}")
 
         finally:
-            wb.Close(SaveChanges=False)
+            if wb is not None:
+                wb.Close(SaveChanges=False)
             xlApp.Quit()
 
+        # Instead of updating the GUI directly, put the message in the queue
+        queue.put(f"Uloženo jako:{sheet_name}\n")
 
     def save_all_excels_as_pdfs(self):
         has_excel_files = False
+        q = queue.Queue()
+
+        threads = []
         for filename in os.listdir('.'):
             if filename.endswith('.xlsx') and filename != 'template.xlsx' and filename != 'temporary.xlsx':
                 has_excel_files = True
                 wb = openpyxl.load_workbook(filename)
                 for sheet in wb:
-                    self.save_excel_as_pdf(filename, sheet.title)
-                    self.output_console.insert(tk.END, f"Uloženo jako:{sheet.title}\n")
-                    self.output_console.see(tk.END)  # Auto-scroll to the end
-                    self.output_console.update()  # Ensure the output console is updated
-    
+                    t = threading.Thread(target=self.save_excel_as_pdf, args=(filename, sheet.title, q))
+                    t.start()
+                    threads.append(t)
+
+        # Wait for all threads to finish
+        for t in threads:
+            t.join()
+
+        # Update the GUI with the messages from the queue
+        while not q.empty():
+            message = q.get()
+            self.output_console.insert(tk.END, message)
+            self.output_console.see(tk.END)  # Auto-scroll to the end
+            self.output_console.update()  # Ensure the output console is updated
+
         if not has_excel_files:
             messagebox.showerror("Chyba", "A teď zase Olinka nedodala Excely na konvertování do PDF. Bože muj.")
         else:
             self.output_console.insert(tk.END, "Všechny listy v excelu byly uloženy jako samostatné PDF.\n")
             self.output_console.see(tk.END)  # Auto-scroll to the end
             self.output_console.update()  # Ensure the output console is updated
-
     def insert_image_to_excel(self):
         def insert_image(excel_file_path, image_file_path, cell_name, row_height=None, column_width=None, pic_width=None, pic_height=None):
             # Open Excel
