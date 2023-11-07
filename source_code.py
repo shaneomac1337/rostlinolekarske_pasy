@@ -470,7 +470,7 @@ class PlantCodeFinder(tk.Frame):
             self.output_console.see(tk.END)  # Auto-scroll to the end
             self.output_console.update()  # Ensure the output console is updated
 
-    def save_excel_as_pdf(self, excel_file, sheet_name, queue):
+    def save_excel_as_pdf(self, excel_file, sheet_name, queue, counter):
         """Save the given sheet in excel file as pdf in the 'pdf' folder."""
         pdf_folder = "pdf"
         if not os.path.exists(pdf_folder):
@@ -503,9 +503,13 @@ class PlantCodeFinder(tk.Frame):
         # Instead of updating the GUI directly, put the message in the queue
         queue.put(f"Uloženo jako:{sheet_name}\n")
 
+        # Increment the counter
+        counter[0] += 1
+
     def save_all_excels_as_pdfs(self):
         has_excel_files = False
         q = queue.Queue()
+        counter = [0]  # Use a list so that the value is mutable inside the nested function
 
         threads = []
         for filename in os.listdir('.'):
@@ -513,27 +517,32 @@ class PlantCodeFinder(tk.Frame):
                 has_excel_files = True
                 wb = openpyxl.load_workbook(filename)
                 for sheet in wb:
-                    t = threading.Thread(target=self.save_excel_as_pdf, args=(filename, sheet.title, q))
+                    t = threading.Thread(target=self.save_excel_as_pdf, args=(filename, sheet.title, q, counter))
                     t.start()
                     threads.append(t)
 
-        # Wait for all threads to finish
-        for t in threads:
-            t.join()
+        # Function to update the GUI
+        def update_gui():
+            while not q.empty():
+                message = q.get()
+                self.output_console.insert(tk.END, message)
+                self.output_console.see(tk.END)  # Auto-scroll to the end
+                self.output_console.update()  # Ensure the output console is updated
 
-        # Update the GUI with the messages from the queue
-        while not q.empty():
-            message = q.get()
-            self.output_console.insert(tk.END, message)
-            self.output_console.see(tk.END)  # Auto-scroll to the end
-            self.output_console.update()  # Ensure the output console is updated
+            # If all threads have finished, stop updating the GUI
+            if counter[0] == len(threads):
+                if not has_excel_files:
+                    messagebox.showerror("Chyba", "A teď zase Olinka nedodala Excely na konvertování do PDF. Bože muj.")
+                else:
+                    self.output_console.insert(tk.END, "Všechny listy v excelu byly uloženy jako samostatné PDF.\n")
+                    self.output_console.see(tk.END)  # Auto-scroll to the end
+                    self.output_console.update()  # Ensure the output console is updated
+            else:
+                self.output_console.after(100, update_gui)  # Schedule the next call
 
-        if not has_excel_files:
-            messagebox.showerror("Chyba", "A teď zase Olinka nedodala Excely na konvertování do PDF. Bože muj.")
-        else:
-            self.output_console.insert(tk.END, "Všechny listy v excelu byly uloženy jako samostatné PDF.\n")
-            self.output_console.see(tk.END)  # Auto-scroll to the end
-            self.output_console.update()  # Ensure the output console is updated
+        # Start the GUI update
+        self.output_console.after(100, update_gui)
+
     def insert_image_to_excel(self):
         def insert_image(excel_file_path, image_file_path, cell_name, row_height=None, column_width=None, pic_width=None, pic_height=None):
             # Open Excel
