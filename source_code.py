@@ -1451,29 +1451,35 @@ class PlantCodeFinder(tk.Frame):
                 texts.append(page.extract_text())
             return texts
 
-        def write_to_txt_and_extract_invoice_number_and_email(file_path, text, page_number):
-            invoice_number = None
+        def write_to_txt_and_extract_invoice_number_and_email(file_path, texts, current_invoice_number=None):
+            invoice_number = current_invoice_number
             email = None
-            for line in text.split('\n'):
-                if "Faktura č.:" in line:
-                    match = re.search(r'Faktura č.:\s*(\d+)', line)
-                    if match:
-                        invoice_number = match.group(1)
-                if "E-mail:" in line:
-                    match = re.search(r'(?i)E-mail:\s*([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)', line)
-                    if match:
-                        email = match.group(1)
+            for text in texts:
+                for line in text.split('\n'):
+                    if "Faktura č.:" in line:
+                        match = re.search(r'Faktura č.:\s*(\d+)', line)
+                        if match:
+                            invoice_number = match.group(1)
+                    if "E-mail:" in line:
+                        match = re.search(r'(?i)E-mail:\s*([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)', line)
+                        if match:
+                            email = match.group(1)
+                    if "Podnikatel je zapsán do živnostenského rejstříku. Nejsem plátce DPH! Vystavil: Rudolf Málek" in line:
+                        # This is the end of an invoice, you can handle it here
+                        break
 
-            if invoice_number:
-                # Create 'txt' directory inside 'faktury' if it doesn't exist
-                if not os.path.exists('faktury/txt'):
-                    os.makedirs('faktury/txt')
+                if invoice_number:
+                    # Create 'txt' directory inside 'faktury' if it doesn't exist
+                    if not os.path.exists('faktury/txt'):
+                        os.makedirs('faktury/txt')
 
-                # Save .txt file in 'faktury/txt' directory
-                with open(f"faktury/txt/{invoice_number}.txt", 'w', encoding='utf-8') as txt_file_obj:
-                    txt_file_obj.write(text)
+                    # Save .txt file in 'faktury/txt' directory
+                    txt_file_path = f"faktury/txt/{invoice_number}.txt"
+                    with open(txt_file_path, 'a', encoding='utf-8') as txt_file_obj:  # 'a' for append mode
+                        txt_file_obj.write(text)
 
             return invoice_number, email
+
 
         def write_to_txt(file_path, data):
             with open(file_path, 'w', encoding='utf-8') as txt_file_obj:
@@ -1512,29 +1518,32 @@ class PlantCodeFinder(tk.Frame):
 
             pdf_path = os.path.join('faktury', pdf_file)
             texts = convert_pdf_to_txt(pdf_path)
+            current_invoice_number = None
+            current_email = None
             for i, text in enumerate(texts):
-                invoice_number, email = write_to_txt_and_extract_invoice_number_and_email(pdf_path, text, i+1)
-                if invoice_number:
-                    invoice_numbers.append(invoice_number)
-                if email:
+                invoice_number, email = write_to_txt_and_extract_invoice_number_and_email(pdf_path, [text], current_invoice_number)
+                if invoice_number and invoice_number != current_invoice_number:
+                    current_invoice_number = invoice_number
+                    invoice_numbers.append(current_invoice_number)
+                if email and email != current_email:
+                    current_email = email
                     emails.append(email)
 
         invoice_txt_path = 'invoice_numbers.txt'
         email_txt_path = 'emails.txt'
-        
+
         write_to_txt(invoice_txt_path, invoice_numbers)
         write_to_txt(email_txt_path, emails)
 
         excel_path = 'mail_tool/recipients.xlsx'  # Save Excel file in 'mail_tool' directory
         self.output_console.insert(tk.END, "Zapisuji získaná data do recipients.xlsx pro Olinku..\n")
         self.output_console.see(tk.END)  # Auto-scroll to the end
-        self.output_console.update()  # Ensure the output console is update
+        self.output_console.update()  # Ensure the output console is updated
         write_to_excel(excel_path, emails, invoice_numbers)
 
         self.output_console.insert(tk.END, "Zpracování dokončeno.\n")
         self.output_console.see(tk.END)  # Auto-scroll to the end
         self.output_console.update()  # Ensure the output console is updated
-
 
     def create_excel(self):
         # Path to the directory containing the script and the mail_tool folder
