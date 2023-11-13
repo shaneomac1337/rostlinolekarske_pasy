@@ -1545,6 +1545,24 @@ class PlantCodeFinder(tk.Frame):
         self.output_console.see(tk.END)  # Auto-scroll to the end
         self.output_console.update()  # Ensure the output console is updated
 
+
+        # Add the optimize_txts function here
+        def optimize_txts(directory):
+            for filename in os.listdir(directory):
+                if filename.endswith(".txt"):
+                    with open(os.path.join(directory, filename), 'r+', encoding='utf-8') as file:
+                        lines = file.readlines()
+                        file.seek(0)
+                        for line in lines:
+                            if "(Číslo výrobku) Objednané zboží Ks Cena / ks Celkem" in line and line.strip() != "(Číslo výrobku) Objednané zboží Ks Cena / ks Celkem":
+                                print(f"Deleting from line: {line}")  # Print the line before deletion
+                                line = line.replace("(Číslo výrobku) Objednané zboží Ks Cena / ks Celkem", "")
+                            file.write(line)
+                        file.truncate()
+
+        # Call the optimize_txts function
+        optimize_txts('faktury/txt')
+
     def create_excel(self):
         # Path to the directory containing the script and the mail_tool folder
         dir_path = os.path.dirname(os.path.realpath(__file__))
