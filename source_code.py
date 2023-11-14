@@ -1546,7 +1546,6 @@ class PlantCodeFinder(tk.Frame):
         self.output_console.update()  # Ensure the output console is updated
 
 
-        # Add the optimize_txts function here
         def optimize_txts(directory):
             for filename in os.listdir(directory):
                 if filename.endswith(".txt"):
@@ -1554,9 +1553,11 @@ class PlantCodeFinder(tk.Frame):
                         lines = file.readlines()
                         file.seek(0)
                         for line in lines:
-                            if "(Číslo výrobku) Objednané zboží Ks Cena / ks Celkem" in line and line.strip() != "(Číslo výrobku) Objednané zboží Ks Cena / ks Celkem":
-                                print(f"Deleting from line: {line}")  # Print the line before deletion
-                                line = line.replace("(Číslo výrobku) Objednané zboží Ks Cena / ks Celkem", "")
+                            if line.strip().endswith("Celkem"):
+                                kč_index = line.rfind("Kč")
+                                if kč_index != -1:
+                                    print(f"Deleting from line: {line}")  # Print the line before deletion
+                                    line = line[:kč_index+2] + "\n"  # +2 to include "Kč" and the space after it
                             file.write(line)
                         file.truncate()
 
