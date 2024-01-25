@@ -34,7 +34,7 @@ import queue
 import pythoncom
 
 
-current_version = "v1.2.3"
+current_version = "v1.2.4"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 
 try:
@@ -116,7 +116,9 @@ class PlantCodeFinder(tk.Frame):
         <br>
         <br>
         Rostlinolékařský pas naleznete v příloze. <br>
-
+        <br>
+        <br>
+        Tento email je generován automaticky, a proto vás žádáme, abyste na něj neodpovídali. Případné dotazy nebo zprávy prosím zasílejte na adresu  <b>obchod@tropik.cz</b>.
         </body>
         </html>
         ''' 
