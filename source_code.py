@@ -98,6 +98,9 @@ class PlantCodeFinder(tk.Frame):
         </style>
         </head>
         <body>
+            <b>Tento email je generován automaticky, a proto vás žádáme, abyste na něj neodpovídali. Případné dotazy nebo zprávy prosím zasílejte na adresu obchod@tropik.cz</b>.
+        <br>
+        <br>    
             Vážený zákazníku,
         <br>
         <br>
@@ -116,9 +119,6 @@ class PlantCodeFinder(tk.Frame):
         <br>
         <br>
         Rostlinolékařský pas naleznete v příloze. <br>
-        <br>
-        <br>
-        Tento email je generován automaticky, a proto vás žádáme, abyste na něj neodpovídali. Případné dotazy nebo zprávy prosím zasílejte na adresu  <b>obchod@tropik.cz</b>.
         </body>
         </html>
         ''' 
