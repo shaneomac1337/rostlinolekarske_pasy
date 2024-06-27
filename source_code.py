@@ -34,7 +34,7 @@ import queue
 import pythoncom
 
 
-current_version = "v1.2.5"
+current_version = "v1.2.6"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 
 try:
@@ -1682,7 +1682,7 @@ class PlantCodeFinder(tk.Frame):
                     match = re.search(r'\(\)\s(.+)', line)
                     if match:
                         plant_name = match.group(1)
-                        if ("semen" in plant_name or ("hlíz" in plant_name and not ("hlíznatá" in plant_name or "hlíznatý" in plant_name))) and "semenáč" not in plant_name:
+                        if ("semen" in plant_name or ("hlíz" in plant_name and not ("hlíznatá" in plant_name or "hlíznatý" in plant_name))) and "semenáč" not in plant_name and "bezsemenná" not in plant_name:
                             excluded_plant_names.append((invoice_number, plant_name))  # Add the invoice number and the excluded plant name to the list
                         else:
                             plant_names.append(plant_name)
