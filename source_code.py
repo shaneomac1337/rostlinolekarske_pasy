@@ -1508,9 +1508,8 @@ class PlantCodeFinder(tk.Frame):
 
         # Get all PDF files in the 'faktury' directory
         pdf_files = [f for f in os.listdir('faktury') if f.endswith('.pdf')]
-
-        invoice_numbers = []
-        emails = []
+        # Use a dictionary to store unique invoice-email pairs
+        invoice_email_pairs = {}  # Using invoice number as key to ensure uniqueness
 
         # Process each PDF file
         for pdf_file in pdf_files:
@@ -1522,21 +1521,32 @@ class PlantCodeFinder(tk.Frame):
             texts = convert_pdf_to_txt(pdf_path)
             current_invoice_number = None
             current_email = None
-            for i, text in enumerate(texts):
-                invoice_number, email = write_to_txt_and_extract_invoice_number_and_email(pdf_path, [text], current_invoice_number)
-                if invoice_number and invoice_number != current_invoice_number:
-                    current_invoice_number = invoice_number
-                    invoice_numbers.append(current_invoice_number)
-                if email and email != current_email:
-                    current_email = email
-                    emails.append(email)
+            
+            for text in texts:
+                invoice_number, email = write_to_txt_and_extract_invoice_number_and_email(
+                    pdf_path, [text], current_invoice_number
+                )
+                
+                if invoice_number and email:
+                    # Store only unique combinations
+                    invoice_email_pairs[invoice_number] = email
 
-        invoice_txt_path = 'invoice_numbers.txt'
-        email_txt_path = 'emails.txt'
+                    # Print each line to the output console
+                    self.output_console.insert(tk.END, f"Nalezena faktura: {invoice_number} s emailem: {email}\n")
+                    self.output_console.see(tk.END)
+                    self.output_console.update()
 
-        write_to_txt(invoice_txt_path, invoice_numbers)
-        write_to_txt(email_txt_path, emails)
+            # Force garbage collection
+            gc.collect()
 
+        # Convert the dictionary to separate lists
+        invoice_numbers = list(invoice_email_pairs.keys())
+        emails = list(invoice_email_pairs.values())
+
+        # Debug output
+        self.output_console.insert(tk.END, f"Nalezeno unikátních faktur: {len(invoice_numbers)}\n")
+        self.output_console.insert(tk.END, f"Nalezeno emailů: {len(emails)}\n")
+        
         excel_path = 'mail_tool/recipients.xlsx'  # Save Excel file in 'mail_tool' directory
         self.output_console.insert(tk.END, "Zapisuji získaná data do recipients.xlsx pro Olinku..\n")
         self.output_console.see(tk.END)  # Auto-scroll to the end
