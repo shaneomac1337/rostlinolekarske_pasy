@@ -34,7 +34,7 @@ import queue
 import pythoncom
 
 
-current_version = "v1.2.6"
+current_version = "v1.2.7"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 
 try:
