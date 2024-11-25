@@ -32,6 +32,7 @@ import webbrowser
 import threading
 import queue
 import pythoncom
+from PyPDF2 import PdfMerger, PdfReader, PdfWriter
 
 
 current_version = "v1.2.7"
@@ -471,19 +472,18 @@ class PlantCodeFinder(tk.Frame):
             self.output_console.insert(tk.END, "Složka missing už existuje.\n")
             self.output_console.see(tk.END)  # Auto-scroll to the end
             self.output_console.update()  # Ensure the output console is updated
-
     def save_excel_as_pdf(self, excel_file, sheet_name, queue, counter):
-        """Save the given sheet in excel file as pdf in the 'pdf' folder."""
+        """Save the given sheet in excel file as pdf and merge it with original invoice."""
         pdf_folder = "pdf"
         if not os.path.exists(pdf_folder):
             os.makedirs(pdf_folder)
 
         pdf_file = f"{pdf_folder}/{sheet_name}.pdf"
-
+    
         wb = None
         try:
             pythoncom.CoInitialize()
-            xlApp = win32com.client.Dispatch("Excel.Application")
+            xlApp = win32.Dispatch("Excel.Application")
             xlApp.Visible = False
 
             wb = xlApp.Workbooks.Open(os.path.abspath(excel_file), ReadOnly=1)
@@ -494,16 +494,37 @@ class PlantCodeFinder(tk.Frame):
             ws.PageSetup.FitToPagesTall = 1  # Fit to 1 page tall
             ws.ExportAsFixedFormat(0, os.path.abspath(pdf_file))
 
+            # After creating the PDF from Excel, merge it with the original invoice
+            invoice_pdf = f"faktury/single_invoices/{sheet_name}.pdf"  # Updated path to look in single_invoices
+            if os.path.exists(invoice_pdf):
+                merger = PdfMerger()
+                
+                # Add the plant passport PDF (generated from Excel)
+                merger.append(pdf_file)
+                
+                # Add the original invoice PDF
+                merger.append(invoice_pdf)
+                
+                # Save the merged PDF, temporarily rename the original
+                temp_file = f"{pdf_folder}/temp_{sheet_name}.pdf"
+                merger.write(temp_file)
+                merger.close()
+                
+                # Replace the original PDF with the merged version
+                os.remove(pdf_file)
+                os.rename(temp_file, pdf_file)
+                
+                queue.put(f"Uloženo jako: {sheet_name} (včetně faktury)\n")
+            else:
+                queue.put(f"Uloženo jako: {sheet_name} (bez faktury - nenalezena)\n")
+
         except Exception as e:
-            print(f"Failed to convert {excel_file} - {sheet_name} to PDF: {e}")
+            queue.put(f"Chyba při zpracování {sheet_name}: {str(e)}\n")
 
         finally:
             if wb is not None:
                 wb.Close(SaveChanges=False)
             xlApp.Quit()
-
-        # Instead of updating the GUI directly, put the message in the queue
-        queue.put(f"Uloženo jako:{sheet_name}\n")
 
         # Increment the counter
         counter[0] += 1
@@ -1428,24 +1449,23 @@ class PlantCodeFinder(tk.Frame):
 
     def process_pdfs(self):
         # Check if 'faktury/txt' directory exists
-
         if os.path.exists('faktury/txt'):
-            # If it does, print a message and delete the entire directory tree
-
             self.output_console.insert(tk.END, "Nalezl jsem informace o předchozích zpracovaných fakturách, pro jistotu je mažu, aby se Olince nestal incident :)\n")
-            self.output_console.see(tk.END)  # Auto-scroll to the end
-            self.output_console.update()  # Ensure the output console is updated
+            self.output_console.see(tk.END)
+            self.output_console.update()
             shutil.rmtree('faktury/txt')
 
-        # Recreate the 'faktury/txt' directory
-        os.makedirs('faktury/txt')
+        # Create necessary directories
+        os.makedirs('faktury/txt', exist_ok=True)
+        os.makedirs('faktury/single_invoices', exist_ok=True)
+
         # Get all PDF files in the 'faktury' directory
         pdf_files = [f for f in os.listdir('faktury') if f.endswith('.pdf')]
 
-        # Check if there are any PDF files
         if not pdf_files:
             messagebox.showwarning("Olinko???", "Vrzni mi sem prosím nějakou tu fakturu, nebo rovnou dvě.")
-            return  # Exit the method
+            return
+
         def convert_pdf_to_txt(file_path):
             pdf_reader = PdfReader(file_path)
             texts = []
@@ -1466,27 +1486,15 @@ class PlantCodeFinder(tk.Frame):
                         match = re.search(r'(?i)E-mail:\s*([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)', line)
                         if match:
                             email = match.group(1)
-                    if "Podnikatel je zapsán do živnostenského rejstříku. Nejsem plátce DPH! Vystavil: Rudolf Málek" in line:
-                        # This is the end of an invoice, you can handle it here
+                    if "Podnikatel je zapsán do živnostenského rejstříku. Nejsem plátce DPH! Vystavil: Rudolf Málek" in line or "Podnikatel je zapsán do živnostenského rejstříku. Nejsem plátce DPH! Vystavil: Radim Kolečkář" in line:
                         break
 
-                if invoice_number:
-                    # Create 'txt' directory inside 'faktury' if it doesn't exist
-                    if not os.path.exists('faktury/txt'):
-                        os.makedirs('faktury/txt')
-
-                    # Save .txt file in 'faktury/txt' directory
-                    txt_file_path = f"faktury/txt/{invoice_number}.txt"
-                    with open(txt_file_path, 'a', encoding='utf-8') as txt_file_obj:  # 'a' for append mode
-                        txt_file_obj.write(text)
+            if invoice_number:
+                txt_file_path = f"faktury/txt/{invoice_number}.txt"
+                with open(txt_file_path, 'a', encoding='utf-8') as txt_file_obj:
+                    txt_file_obj.write(text)
 
             return invoice_number, email
-
-
-        def write_to_txt(file_path, data):
-            with open(file_path, 'w', encoding='utf-8') as txt_file_obj:
-                for item in data:
-                    txt_file_obj.write(f"{item}\n")
 
         def write_to_excel(file_path, emails, invoice_numbers):
             invoice_numbers = [str(invoice) + '.pdf' for invoice in invoice_numbers]
@@ -1495,7 +1503,6 @@ class PlantCodeFinder(tk.Frame):
                 'Attachment': invoice_numbers
             })
 
-            # Create 'mail_tool' directory if it doesn't exist
             if not os.path.exists('mail_tool'):
                 os.makedirs('mail_tool')
 
@@ -1506,32 +1513,79 @@ class PlantCodeFinder(tk.Frame):
             sheet.column_dimensions['B'].width = 11
             book.save(file_path)
 
-        # Get all PDF files in the 'faktury' directory
-        pdf_files = [f for f in os.listdir('faktury') if f.endswith('.pdf')]
-        # Use a dictionary to store unique invoice-email pairs
-        invoice_email_pairs = {}  # Using invoice number as key to ensure uniqueness
+        # Dictionary to store unique invoice-email pairs
+        invoice_email_pairs = {}
 
         # Process each PDF file
         for pdf_file in pdf_files:
             self.output_console.insert(tk.END, f"Zpracovávám {pdf_file}...\n")
-            self.output_console.see(tk.END)  # Auto-scroll to the end
-            self.output_console.update()  # Ensure the output console is updated
+            self.output_console.see(tk.END)
+            self.output_console.update()
 
             pdf_path = os.path.join('faktury', pdf_file)
-            texts = convert_pdf_to_txt(pdf_path)
+            pdf_reader = PdfReader(pdf_path)
+            
+            # Variables for current invoice processing
+            current_invoice_pages = []
+            current_invoice_text = ""
             current_invoice_number = None
             current_email = None
             
-            for text in texts:
+            for page_num, page in enumerate(pdf_reader.pages):
+                text = page.extract_text()
+                
+                # Check for invoice number in the page
+                invoice_match = re.search(r'Faktura č.:\s*(\d+)', text)
+                
+                if invoice_match:
+                    # If we have a previous invoice, save both PDF and text
+                    if current_invoice_pages and current_invoice_number:
+                        # Save PDF
+                        output_pdf_path = f'faktury/single_invoices/{current_invoice_number}.pdf'
+                        writer = PdfWriter()
+                        for invoice_page in current_invoice_pages:
+                            writer.add_page(invoice_page)
+                        with open(output_pdf_path, 'wb') as output_file:
+                            writer.write(output_file)
+                        
+                        # Process text for email extraction
+                        invoice_number, email = write_to_txt_and_extract_invoice_number_and_email(
+                            pdf_path, [current_invoice_text], current_invoice_number
+                        )
+                        
+                        if invoice_number and email:
+                            invoice_email_pairs[invoice_number] = email
+                            self.output_console.insert(tk.END, f"Nalezena faktura: {invoice_number} s emailem: {email}\n")
+                            self.output_console.see(tk.END)
+                            self.output_console.update()
+                    
+                    # Start new invoice
+                    current_invoice_number = invoice_match.group(1)
+                    current_invoice_pages = [page]
+                    current_invoice_text = text
+                else:
+                    # Add page to current invoice if we have one
+                    if current_invoice_number:
+                        current_invoice_pages.append(page)
+                        current_invoice_text += "\n" + text
+            
+            # Process the last invoice
+            if current_invoice_pages and current_invoice_number:
+                # Save PDF
+                output_pdf_path = f'faktury/single_invoices/{current_invoice_number}.pdf'
+                writer = PdfWriter()
+                for invoice_page in current_invoice_pages:
+                    writer.add_page(invoice_page)
+                with open(output_pdf_path, 'wb') as output_file:
+                    writer.write(output_file)
+                
+                # Process text for email extraction
                 invoice_number, email = write_to_txt_and_extract_invoice_number_and_email(
-                    pdf_path, [text], current_invoice_number
+                    pdf_path, [current_invoice_text], current_invoice_number
                 )
                 
                 if invoice_number and email:
-                    # Store only unique combinations
                     invoice_email_pairs[invoice_number] = email
-
-                    # Print each line to the output console
                     self.output_console.insert(tk.END, f"Nalezena faktura: {invoice_number} s emailem: {email}\n")
                     self.output_console.see(tk.END)
                     self.output_console.update()
@@ -1547,17 +1601,13 @@ class PlantCodeFinder(tk.Frame):
         self.output_console.insert(tk.END, f"Nalezeno unikátních faktur: {len(invoice_numbers)}\n")
         self.output_console.insert(tk.END, f"Nalezeno emailů: {len(emails)}\n")
         
-        excel_path = 'mail_tool/recipients.xlsx'  # Save Excel file in 'mail_tool' directory
+        # Write to Excel
+        excel_path = 'mail_tool/recipients.xlsx'
         self.output_console.insert(tk.END, "Zapisuji získaná data do recipients.xlsx pro Olinku..\n")
-        self.output_console.see(tk.END)  # Auto-scroll to the end
-        self.output_console.update()  # Ensure the output console is updated
+        self.output_console.see(tk.END)
+        self.output_console.update()
         write_to_excel(excel_path, emails, invoice_numbers)
-
-        self.output_console.insert(tk.END, "Zpracování dokončeno.\n")
-        self.output_console.see(tk.END)  # Auto-scroll to the end
-        self.output_console.update()  # Ensure the output console is updated
-
-
+        
         def optimize_txts(directory):
             for filename in os.listdir(directory):
                 if filename.endswith(".txt"):
@@ -1575,6 +1625,10 @@ class PlantCodeFinder(tk.Frame):
 
         # Call the optimize_txts function
         optimize_txts('faktury/txt')
+
+        self.output_console.insert(tk.END, "Zpracování dokončeno.\n")
+        self.output_console.see(tk.END)
+        self.output_console.update()
 
     def create_excel(self):
         # Path to the directory containing the script and the mail_tool folder
