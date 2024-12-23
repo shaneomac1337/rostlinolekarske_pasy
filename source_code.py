@@ -35,7 +35,7 @@ import pythoncom
 from PyPDF2 import PdfMerger, PdfReader, PdfWriter
 
 
-current_version = "v1.2.9"
+current_version = "v1.3.0"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 
 try:
@@ -567,72 +567,49 @@ class PlantCodeFinder(tk.Frame):
         self.output_console.after(100, update_gui)
 
     def insert_image_to_excel(self):
-        def insert_image(excel_file_path, image_file_path, cell_name, row_height=None, column_width=None, pic_width=None, pic_height=None):
-            # Open Excel
-            excel = win32.gencache.EnsureDispatch('Excel.Application')
-            excel.Visible = False  # If you want Excel Application to be visible during execution, set this to True
+        def find_last_bordered_row(sheet):
+            used_range = sheet.UsedRange
+            last_row = used_range.Row + used_range.Rows.Count - 1
+            
+            for row in range(last_row, 0, -1):
+                for col in range(1, used_range.Columns.Count + 1):
+                    cell = sheet.Cells(row, col)
+                    if any(border.LineStyle is not None and border.LineStyle != 0 
+                          for border in [cell.Borders(side) for side in range(1, 5)]):
+                        return row
+            return 1
 
-            # Open Workbook
+        def insert_text(excel_file_path):
+            excel = win32.gencache.EnsureDispatch('Excel.Application')
+            excel.Visible = False
+
             wb = excel.Workbooks.Open(excel_file_path)
 
-            # Iterate through each sheet in the workbook
             for sheet in wb.Sheets:
+                # Find last bordered row
+                last_bordered_row = find_last_bordered_row(sheet)
+                # Set target row for new content (2 rows below last border)
+                target_row = last_bordered_row + 2
+                
+                # Add the two lines of text
+                sheet.Cells(target_row, 1).Value = "Vážený zákazníku,"
+                sheet.Cells(target_row + 1, 1).Value = "ode dne 14. prosince 2019 nabývá účinnosti nové nařízení Evropského parlamentu, a to nám ukládá jako prodejci povinnosti při prodeji rostlin dodat zákazníkovi Rostlinolékařský pas. Je to z důvodu, aby se evidoval pohyb prodávaných rostlin po území Evropské unie."
 
-                # Get cell dimensions
-                target_cell = sheet.Range(cell_name)
-                top = target_cell.Top
-                left = target_cell.Left
-
-                # Set row height and column width for the entire sheet if provided
-                if row_height is not None:
-                    sheet.Rows.RowHeight = row_height
-                if column_width is not None:
-                    sheet.Columns.ColumnWidth = column_width
-
-                # Add picture
-                pic = sheet.Pictures().Insert(image_file_path)
-
-                # Set image position
-                pic.Top = top
-                pic.Left = left
-
-                # Set image size
-                if pic_width is not None:
-                    pic.Width = pic_width
-                if pic_height is not None:
-                    pic.Height = pic_height
-
-            # Save and Close
             wb.Save()
             wb.Close()
-
-            # Quit Excel
             excel.Quit()
 
-        # Get the current working directory
         directory_path = os.getcwd()
-        cell_name = "C6"
-
-        # Set your desired row height
-        row_height = 15.75  # Adjust this value to change the row height for all rows in the sheet
-
-        # Set your desired picture width and height
-        pic_width = 147  # Adjust this value to set the picture width
-        pic_height = 80  # Adjust this value to set the picture height
-
-        # Get a list of all Excel files in the directory
         excel_files = [f for f in os.listdir(directory_path) if f.endswith('.xlsx') or f.endswith('.xls')]
 
-        # Run the function on each Excel file
         for excel_file in excel_files:
             if excel_file == 'template.xlsx' or excel_file == 'temporary.xlsx':
-                continue  # Skip the template file and temporary file
+                continue
             excel_file_path = os.path.join(directory_path, excel_file)
-            image_file_path = os.path.join(directory_path, "eu.png")  # The image file is in the same directory as the Excel files
-            insert_image(excel_file_path, image_file_path, cell_name, row_height, None, pic_width, pic_height)
-            self.output_console.insert(tk.END, f"Obrázek vložen do: {excel_file}\n")
-            self.output_console.see(tk.END)  # Auto-scroll to the end
-            self.output_console.update()  # Ensure the output console is updated      
+            insert_text(excel_file_path)
+            self.output_console.insert(tk.END, f"Text vložen do: {excel_file}\n")
+            self.output_console.see(tk.END)
+            self.output_console.update()
 
     def manually_add_code(self):
         def populate_listbox():
