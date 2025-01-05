@@ -488,7 +488,7 @@ class PlantCodeFinder(tk.Frame):
 
             wb = xlApp.Workbooks.Open(os.path.abspath(excel_file), ReadOnly=1)
             ws = wb.Worksheets(sheet_name)
-            ws.PageSetup.Orientation = 2  # 2 represents landscape orientation
+            ws.PageSetup.Orientation = 1  # 2 represents landscape orientation | 1 represents portrait orientation
             ws.PageSetup.Zoom = False  # Turn off Zoom property
             ws.PageSetup.FitToPagesWide = 1  # Fit to 1 page wide
             ws.PageSetup.FitToPagesTall = 1  # Fit to 1 page tall
