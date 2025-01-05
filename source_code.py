@@ -35,7 +35,7 @@ import pythoncom
 from PyPDF2 import PdfMerger, PdfReader, PdfWriter
 
 
-current_version = "v1.2.9"
+current_version = "v1.3.0"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 
 try:
