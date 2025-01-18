@@ -35,7 +35,7 @@ import pythoncom
 from PyPDF2 import PdfMerger, PdfReader, PdfWriter
 
 
-current_version = "v1.3.0"
+current_version = "v1.3.1"
 url = 'https://api.github.com/repos/{owner}/{repo}/releases/latest'
 
 try:
@@ -1746,9 +1746,7 @@ class PlantCodeFinder(tk.Frame):
                     match = re.search(r'\(\)\s(.+)', line)
                     if match:
                         plant_name = match.group(1)
-                        if ("semen" in plant_name or 
-                            ("hlíz" in plant_name and not ("hlíznatá" in plant_name or "hlíznatý" in plant_name)) or
-                            "Dárkový poukaz" in plant_name) and "semenáč" not in plant_name and "bezsemenná" not in plant_name:
+                        if "Dárkový poukaz" in plant_name or "Přidaný produkt" in plant_name:
                             excluded_plant_names.append((invoice_number, plant_name))  # Add the invoice number and the excluded plant name to the list
                         else:
                             plant_names.append(plant_name)
@@ -1842,7 +1840,7 @@ class PlantCodeFinder(tk.Frame):
         os.remove('excluded_plant_names.txt')  # Delete the text file
 
         # Ask the user if they want to open the created Excel file
-        if messagebox.askyesno("Otevřít soubor", "Moje milá Olinko, máš to hotové a protože jsi to ty a já ti chtěl udělat radost, vytvořil jsem ti soubor, kde je zaznamenáno veškeré semeno a hlíza a taky DÁRKOVÝ POUKAZ které jsem dal pryč, chtěla bys tam nahlédnout?"):
+        if messagebox.askyesno("Otevřít soubor", "Moje milá Olinko, máš to hotové a protože jsi to ty a já ti chtěl udělat radost, vytvořil jsem ti soubor, kde je zaznamenán všecehn PŘIDANÝ PRODUKT a taky DÁRKOVÝ POUKAZ které jsem dal pryč, chtěla bys tam nahlédnout?"):
             # Get the directory of the current script
             script_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -2151,7 +2149,7 @@ class PlantCodeFinder(tk.Frame):
 
             for sheet in wb.sheetnames:
                 if not wb[sheet]['C13'].value:
-                    self.output_console.insert(tk.END, f"Mažu sheet: {sheet} z: {filename} protože píčus zákazník nakoupil jen hlízu nebo semeno a nebo ještě si ten blbec koupil jen dárkový poukaz, ale nic pro sebe a mně to kvuli němu nefungovalo a sheet by byl tedy prázdný a Olinka by posílala maily s prázdnými pasy.\n")
+                    self.output_console.insert(tk.END, f"Mažu sheet: {sheet} z: {filename} protože píčus zákazník nakoupil jen dárkový poukaz a nebo nějaký posraný přidaný produkt, ale nic pro sebe a mně to kvuli němu nefungovalo a sheet by byl tedy prázdný a Olinka by posílala maily s prázdnými pasy.\n")
                     self.output_console.see(tk.END)
                     self.output_console.update()
                     del wb[sheet]
